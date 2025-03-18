@@ -1,6 +1,5 @@
 
 import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { BookmarkProvider } from "./contexts/BookmarkContext";
@@ -23,7 +22,6 @@ const queryClient = new QueryClient({
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
       <BookmarkProvider>
         <Toaster />
         <BrowserRouter>
@@ -35,7 +33,6 @@ const App = () => (
           </Routes>
         </BrowserRouter>
       </BookmarkProvider>
-    </TooltipProvider>
   </QueryClientProvider>
 );
 
