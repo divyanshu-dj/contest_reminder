@@ -7,5 +7,5 @@ const job = cron.schedule('0 */6 * * *', async () => {
     fetchAllContests();
 });
 
-console.log('Cron job scheduled to fetch contest details every 60 seconds.');
+console.log('Cron job scheduled to fetch contest details every 6hr.');
 job.start();

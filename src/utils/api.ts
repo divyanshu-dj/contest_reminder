@@ -3,9 +3,11 @@ import { Contest } from './types';
 import axios from 'axios';
 
 
+const client = 'http://localhost:5000';
+
 export const fetchAllContests = async (): Promise<Contest[]> => {
   try {
-    const response = await axios('http://localhost:5000/api/contests');
+    const response = await axios(`${client}/api/contests`);
     const data = response.data;
 
     if (!data) {
@@ -22,7 +24,7 @@ export const fetchAllContests = async (): Promise<Contest[]> => {
 
 export const addSolutionUrl = async(contestId: string, url: string): Promise<Contest> => {
   try {
-    const {data} = await axios.patch(`http://localhost:5000/api/contests/${contestId}/solution`, {url});
+    const {data} = await axios.patch(`${client}/api/contests/${contestId}/solution`, {url});
     
     return data;
   } catch (error) {
@@ -30,6 +32,20 @@ export const addSolutionUrl = async(contestId: string, url: string): Promise<Con
     return null;
   }
 };
+
+export const handleAutoSync = async () => {
+    try {
+      const {data} = await axios.post(`${client}/api/contests/sync`);
+
+      if(!data) {
+        console.error('Invalid API response:', data);
+        return;
+      }
+      return data;
+    } catch (error) {
+        console.error('Error syncing contests:', error);
+    }
+}
 
 
 

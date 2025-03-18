@@ -4,11 +4,9 @@ import ContestList from '@/components/ContestList';
 import { useBookmarks } from '@/contexts/BookmarkContext';
 import { groupContestsByStatus } from '@/utils/helpers';
 import { Bookmark } from 'lucide-react';
-import { useContests } from '@/hooks/useContests';
 
 const BookmarksPage = () => {
   const { bookmarkedContests } = useBookmarks();
-  const { refreshContests } = useContests();
   
   const groupedContests = groupContestsByStatus(bookmarkedContests);
   const { ONGOING, UPCOMING, COMPLETED } = groupedContests;
@@ -17,7 +15,7 @@ const BookmarksPage = () => {
   
   return (
     <div className="min-h-screen bg-background">
-      <Header refreshContests={refreshContests} />
+      <Header />
       <main className="container py-6 px-4 max-w-7xl">
         <h1 className="text-3xl font-bold mb-6 text-center md:text-left">Bookmarked Contests</h1>
         

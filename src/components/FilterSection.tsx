@@ -45,9 +45,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
     return filter.platforms.includes(platform);
   };
   
-  // Function to determine if all platforms are selected or none (which means show all)
-  const allOrNoPlatformsSelected = filter.platforms.length === 0 || 
-    filter.platforms.length === platformOptions.length;
+  const allOrNoPlatformsSelected = filter.platforms.length === 0 || filter.platforms.length === platformOptions.length;
   
   return (
     <div className="w-full mb-8 backdrop-blur-sm bg-white/20 dark:bg-black/20 rounded-lg p-4 border">

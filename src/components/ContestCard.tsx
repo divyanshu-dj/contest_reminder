@@ -3,11 +3,10 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ExternalLink, Clock, Calendar, Youtube, Video, Play } from 'lucide-react';
+import { ExternalLink, Clock, Calendar, Youtube} from 'lucide-react';
 import { Contest } from '@/utils/types';
 import { formatDate, getTimeRemaining, formatDuration, getPlatformColorClass, getPlatformDisplayName } from '@/utils/helpers';
 import BookmarkButton from './BookmarkButton';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ContestCardProps {
   contest: Contest;
@@ -32,6 +31,9 @@ const ContestCard: React.FC<ContestCardProps> = ({ contest }) => {
     if (contest.status !== 'UPCOMING') return null;
     
     if (timeLeft.total <= 0) {
+      //////////////////////////////////////////////////////////////////////////////////////////////
+      // Task: I need to hit backend to update the status to ONGOING from UPCOMING :<
+      //////////////////////////////////////////////////////////////////////////////////////////////
       return <span className="text-red-500/80 font-bold">Started!</span>;
     }
     

@@ -1,8 +1,6 @@
 
 import { Contest, ContestFilter, Platform } from './types';
 
-// Format a date to a readable string
-
 export const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
   return date.toLocaleDateString('en-US', { 
@@ -77,24 +75,16 @@ export const getPlatformDisplayName = (platform: Platform): string => {
   }
 };
 
-/**
- * Filter contests based on filter criteria
- * @param contests List of all contests
- * @param filter Filter criteria
- * @returns Filtered contests
- */
 export const filterContests = (contests: Contest[], filter: ContestFilter): Contest[] => {
   return contests.filter(contest => {
     // Filter by platform
     if (filter.platforms.length > 0 && !filter.platforms.includes(contest.platform)) {
       return false;
     }
-    
     // Filter by status
     if (filter.status !== 'all' && filter.status !== contest.status.toLowerCase()) {
       return false;
     }
-    
     // Filter by search term
     if (filter.search && !contest.name.toLowerCase().includes(filter.search.toLowerCase())) {
       return false;
@@ -104,12 +94,6 @@ export const filterContests = (contests: Contest[], filter: ContestFilter): Cont
   });
 };
 
-/**
- * Sort contests by start time
- * @param contests List of contests
- * @param ascending Sort direction
- * @returns Sorted contests
- */
 export const sortContestsByTime = (contests: Contest[], ascending = true): Contest[] => {
   return [...contests].sort((a, b) => {
     const timeA = new Date(a.startTime).getTime();
@@ -118,11 +102,6 @@ export const sortContestsByTime = (contests: Contest[], ascending = true): Conte
   });
 };
 
-/**
- * Group contests by status
- * @param contests List of contests
- * @returns Object with contests grouped by status
- */
 export const groupContestsByStatus = (contests: Contest[]): Record<Contest['status'], Contest[]> => {
   const grouped = {
     UPCOMING: [] as Contest[],

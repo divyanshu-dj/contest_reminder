@@ -38,7 +38,6 @@ const GoogleCalendarSync: React.FC<GoogleCalendarSyncProps> = ({ contests }) => 
     const startTimeStr = startDate.toISOString().replace(/-|:|\.\d+/g, '');
     const endTimeStr = endDate.toISOString().replace(/-|:|\.\d+/g, '');
     
-    // Create URL parameters
     const params = new URLSearchParams({
       action: 'TEMPLATE',
       text: `[${contest.platform.toUpperCase()}] ${contest.name}`,

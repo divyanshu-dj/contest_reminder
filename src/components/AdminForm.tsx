@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
 import { Search, Youtube, Save } from 'lucide-react';
 import { getPlatformDisplayName } from '@/utils/helpers';
-import { addSolutionUrl } from '@/utils/api';
+import { handleAutoSync, addSolutionUrl } from '@/utils/api';
 
 interface AdminContestFormProps {
   contests: Contest[];
@@ -18,8 +18,7 @@ const AdminForm: React.FC<AdminContestFormProps> = ({ contests }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedContest, setSelectedContest] = useState<Contest | null>(null);
   const [youtubeUrl, setYoutubeUrl] = useState('');
-  
-  // Memoize filtered contests to prevent recalculation on every render
+
   const filteredContests = useMemo(() => {
     return contests.filter(contest => {
       if (contest.status !== 'COMPLETED') return false;
@@ -28,8 +27,7 @@ const AdminForm: React.FC<AdminContestFormProps> = ({ contests }) => {
       return true;
     });
   }, [contests, selectedPlatform, searchTerm]);
-  
-  // Handle saving the YouTube URL
+
   const handleSaveYoutubeUrl = async () => {
     if (!selectedContest) {
       toast({
@@ -39,7 +37,7 @@ const AdminForm: React.FC<AdminContestFormProps> = ({ contests }) => {
       });
       return;
     }
-    
+
     if (!youtubeUrl) {
       toast({
         title: "YouTube URL is required",
@@ -48,7 +46,7 @@ const AdminForm: React.FC<AdminContestFormProps> = ({ contests }) => {
       });
       return;
     }
-    
+
     // Validate YouTube URL format
     const youtubeUrlPattern = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+$/;
     if (!youtubeUrlPattern.test(youtubeUrl)) {
@@ -59,9 +57,10 @@ const AdminForm: React.FC<AdminContestFormProps> = ({ contests }) => {
       });
       return;
     }
-    
-    // Add solution URL
+
+    // Save YouTube URL in db
     const updatedContest = await addSolutionUrl(selectedContest.contestId, youtubeUrl);
+
     if (!updatedContest) {
       toast({
         title: "Failed to save YouTube URL",
@@ -74,26 +73,23 @@ const AdminForm: React.FC<AdminContestFormProps> = ({ contests }) => {
       title: "YouTube URL saved",
       description: `YouTube URL saved for contest: ${updatedContest.name}`,
     });
-    
+
     console.log("Saved YouTube URL:", {
       contestId: updatedContest.contestId,
       contestName: updatedContest.name,
       platform: updatedContest.platform,
       youtubeUrl
     });
-    
-    // Reset form
+
     setSelectedContest(null);
     setYoutubeUrl('');
   };
-  
-  // Select a contest
+
   const handleSelectContest = (contest: Contest) => {
     setSelectedContest(contest);
     setYoutubeUrl(contest.youtubeVideo || '');
-    
   };
-  
+
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
@@ -102,8 +98,15 @@ const AdminForm: React.FC<AdminContestFormProps> = ({ contests }) => {
           Associate YouTube solution videos with completed contests
         </CardDescription>
       </CardHeader>
-      
+
       <CardContent className="space-y-6">
+        <div>
+          <Button className='bg-white text-primary border-primary hover:bg-primary hover:text-white'
+            onClick={() => handleAutoSync()}>
+            <Youtube className="mr-2 h-4 w-4" />
+            Auto sync YouTube solutions
+          </Button>
+        </div>
         {/* Platform selector */}
         <div>
           <h3 className="text-sm font-medium mb-2">Platform</h3>
@@ -119,11 +122,10 @@ const AdminForm: React.FC<AdminContestFormProps> = ({ contests }) => {
               variant="outline"
               onClick={() => setSelectedPlatform('codeforces')}
               size="sm"
-              className={`border-[hsl(var(--codeforces))] ${
-                selectedPlatform === 'codeforces' 
+              className={`border-[hsl(var(--codeforces))] ${selectedPlatform === 'codeforces'
                   ? 'bg-[hsl(var(--codeforces))] text-white'
                   : 'text-[hsl(var(--codeforces))] hover:text-white hover:bg-[hsl(var(--codeforces))]'
-              }`}
+                }`}
             >
               Codeforces
             </Button>
@@ -131,11 +133,10 @@ const AdminForm: React.FC<AdminContestFormProps> = ({ contests }) => {
               variant="outline"
               onClick={() => setSelectedPlatform('codechef')}
               size="sm"
-              className={`border-[hsl(var(--codechef))] ${
-                selectedPlatform === 'codechef' 
+              className={`border-[hsl(var(--codechef))] ${selectedPlatform === 'codechef'
                   ? 'bg-[hsl(var(--codechef))] text-white'
                   : 'text-[hsl(var(--codechef))] hover:text-white hover:bg-[hsl(var(--codechef))]'
-              }`}
+                }`}
             >
               CodeChef
             </Button>
@@ -143,17 +144,16 @@ const AdminForm: React.FC<AdminContestFormProps> = ({ contests }) => {
               variant="outline"
               onClick={() => setSelectedPlatform('leetcode')}
               size="sm"
-              className={`border-[hsl(var(--leetcode))] ${
-                selectedPlatform === 'leetcode' 
+              className={`border-[hsl(var(--leetcode))] ${selectedPlatform === 'leetcode'
                   ? 'bg-[hsl(var(--leetcode))] text-white'
                   : 'text-[hsl(var(--leetcode))] hover:text-white hover:bg-[hsl(var(--leetcode))]'
-              }`}
+                }`}
             >
               LeetCode
             </Button>
           </div>
         </div>
-        
+
         {/* Search input */}
         <div>
           <h3 className="text-sm font-medium mb-2">Search Contest</h3>
@@ -168,15 +168,15 @@ const AdminForm: React.FC<AdminContestFormProps> = ({ contests }) => {
             />
           </div>
         </div>
-        
+
         {/* Contest list */}
         <div>
           <h3 className="text-sm font-medium mb-2">
-            {filteredContests.length > 0 
-              ? `Select Contest (${filteredContests.length} completed contests)` 
+            {filteredContests.length > 0
+              ? `Select Contest (${filteredContests.length} completed contests)`
               : 'No completed contests found'}
           </h3>
-          
+
           <div className="max-h-60 overflow-y-auto space-y-2 border rounded-md p-2 overflow-x-hidden">
             {filteredContests.length === 0 ? (
               <p className="text-sm text-muted-foreground p-2 text-center">
@@ -184,23 +184,22 @@ const AdminForm: React.FC<AdminContestFormProps> = ({ contests }) => {
               </p>
             ) : (
               filteredContests.map(contest => (
-                <div 
-                  key={contest.contestId} 
-                  className={`p-3 rounded-md cursor-pointer border flex justify-between items-center ${
-                    selectedContest?.contestId === contest.contestId 
-                      ? 'bg-primary/10 border-primary' 
+                <div
+                  key={contest.contestId}
+                  className={`p-3 rounded-md cursor-pointer border flex justify-between items-center ${selectedContest?.contestId === contest.contestId
+                      ? 'bg-primary/10 border-primary'
                       : 'hover:bg-secondary/50'
-                  }`}
+                    }`}
                   onClick={() => handleSelectContest(contest)}
                 >
                   <div className="flex items-center gap-2">
-                    <span 
+                    <span
                       className="text-xs font-semibold px-2 py-0.5 rounded-full text-white"
-                      style={{ 
-                        backgroundColor: 
+                      style={{
+                        backgroundColor:
                           contest.platform === 'codeforces' ? 'hsl(var(--codeforces))' :
-                          contest.platform === 'codechef' ? 'hsl(var(--codechef))' : 
-                          'hsl(var(--leetcode))'
+                            contest.platform === 'codechef' ? 'hsl(var(--codechef))' :
+                              'hsl(var(--leetcode))'
                       }}
                     >
                       {getPlatformDisplayName(contest.platform)}
@@ -215,7 +214,7 @@ const AdminForm: React.FC<AdminContestFormProps> = ({ contests }) => {
             )}
           </div>
         </div>
-        
+
         {/* YouTube URL input */}
         <div>
           <h3 className="text-sm font-medium mb-2">YouTube Solution URL</h3>
@@ -236,10 +235,10 @@ const AdminForm: React.FC<AdminContestFormProps> = ({ contests }) => {
             </p>
           )}
         </div>
-        
+
         {/* Save button */}
-        <Button 
-          onClick={handleSaveYoutubeUrl} 
+        <Button
+          onClick={handleSaveYoutubeUrl}
           disabled={!selectedContest || !youtubeUrl}
           className="w-full"
         >

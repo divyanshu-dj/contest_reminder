@@ -14,7 +14,6 @@ const Index = () => {
     error,
     filter,
     setFilter,
-    refreshContests,
     togglePlatformFilter
   } = useContests();
   
@@ -22,7 +21,7 @@ const Index = () => {
   if (isLoading && contests.length === 0) {
     return (
       <div className="min-h-screen bg-background">
-        <Header refreshContests={refreshContests} />
+        <Header />
         <main className="container py-6 px-4 max-w-7xl">
           <div className="w-full mb-8">
             <Skeleton className="h-[150px] w-full rounded-lg" />
@@ -43,22 +42,15 @@ const Index = () => {
       </div>
     );
   }
-  
-  // Render error state
+
   if (error) {
     return (
       <div className="min-h-screen bg-background">
-        <Header refreshContests={refreshContests} />
+        <Header />
         <main className="container py-6 px-4 max-w-7xl">
           <div className="p-8 text-center rounded-lg border border-destructive/50 bg-destructive/10">
-            <h2 className="text-xl font-semibold mb-2">Error Loading Contests</h2>
-            <p className="text-muted-foreground mb-4">{error}</p>
-            <button 
-              onClick={refreshContests}
-              className="px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90"
-            >
-              Try Again
-            </button>
+            <h2 className="text-xl font-semibold mb-2">Error Loading Contests...Reload!</h2>
+            <p className="text-muted-foreground mb-4">{error.message}</p>
           </div>
         </main>
       </div>
@@ -69,7 +61,7 @@ const Index = () => {
   
   return (
     <div className="min-h-screen bg-background">
-      <Header refreshContests={refreshContests} />
+      <Header />
       <main className="container py-6 px-4 max-w-7xl">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
           <h1 className="text-3xl font-bold text-center md:text-left">Contest Tracker</h1>

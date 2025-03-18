@@ -3,6 +3,7 @@ import cors from 'cors';
 // import contestRoutes from './routes/contestRoutes';
 import { Contest } from './model/Contest';
 import connectDB from './config/db';
+import { youtubeSolution } from './util/youtubeSolution';
 
 const app = express();
 app.use(cors());
@@ -40,6 +41,17 @@ app.patch('/api/contests/:contestId/solution', async (req, res) => {
     } catch (error) {
         console.error("Error adding solution URL:", error);
         res.status(500).json({ error: "Failed to add solution URL" });
+    }
+});
+
+app.post('/api/contests/sync', async (req, res) => {
+    try {
+        const contests = await youtubeSolution();
+        console.log("Contests synced:", contests.length);
+        res.status(200).json(contests);
+    } catch (error) {
+        console.error("Error syncing contests:", error);
+        res.status(500).json({ error: "Failed to sync contests" });
     }
 });
 

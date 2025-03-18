@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { FileQuestion } from "lucide-react";
+import { Link } from 'react-router-dom';
 
 const NotFound = () => {
   const location = useLocation();
@@ -30,10 +31,10 @@ const NotFound = () => {
         
         <div className="space-y-4">
           <Button asChild className="w-full">
-            <a href="/">Return to Home</a>
+            <Link to="/">Return to Home</Link>
           </Button>
           <Button variant="outline" asChild className="w-full">
-            <a href="/bookmarks">View Bookmarks</a>
+            <Link to="/bookmarks">View Bookmarks</Link>
           </Button>
         </div>
       </div>
