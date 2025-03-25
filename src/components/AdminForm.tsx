@@ -7,6 +7,7 @@ import { toast } from '@/components/ui/use-toast';
 import { Search, Youtube, Save } from 'lucide-react';
 import { getPlatformDisplayName } from '@/utils/helpers';
 import { handleAutoSync, addSolutionUrl } from '@/utils/api';
+import { useQueryClient } from "@tanstack/react-query";
 
 interface AdminContestFormProps {
   contests: Contest[];
@@ -29,6 +30,8 @@ const AdminForm: React.FC<AdminContestFormProps> = ({ contests }) => {
   }, [contests, selectedPlatform, searchTerm]);
 
   const handleSaveYoutubeUrl = async () => {
+
+    
     if (!selectedContest) {
       toast({
         title: "No contest selected",
@@ -37,7 +40,7 @@ const AdminForm: React.FC<AdminContestFormProps> = ({ contests }) => {
       });
       return;
     }
-
+    
     if (!youtubeUrl) {
       toast({
         title: "YouTube URL is required",
@@ -46,7 +49,7 @@ const AdminForm: React.FC<AdminContestFormProps> = ({ contests }) => {
       });
       return;
     }
-
+    
     // Validate YouTube URL format
     const youtubeUrlPattern = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+$/;
     if (!youtubeUrlPattern.test(youtubeUrl)) {
@@ -57,10 +60,10 @@ const AdminForm: React.FC<AdminContestFormProps> = ({ contests }) => {
       });
       return;
     }
-
+    
     // Save YouTube URL in db
     const updatedContest = await addSolutionUrl(selectedContest.contestId, youtubeUrl);
-
+    
     if (!updatedContest) {
       toast({
         title: "Failed to save YouTube URL",
@@ -73,23 +76,24 @@ const AdminForm: React.FC<AdminContestFormProps> = ({ contests }) => {
       title: "YouTube URL saved",
       description: `YouTube URL saved for contest: ${updatedContest.name}`,
     });
-
+    
     console.log("Saved YouTube URL:", {
       contestId: updatedContest.contestId,
       contestName: updatedContest.name,
       platform: updatedContest.platform,
       youtubeUrl
     });
-
+    
     setSelectedContest(null);
     setYoutubeUrl('');
   };
-
+  
   const handleSelectContest = (contest: Contest) => {
     setSelectedContest(contest);
     setYoutubeUrl(contest.youtubeVideo || '');
   };
-
+  
+  const queryClient = useQueryClient();
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
@@ -102,7 +106,7 @@ const AdminForm: React.FC<AdminContestFormProps> = ({ contests }) => {
       <CardContent className="space-y-6">
         <div>
           <Button className='bg-white text-primary border-primary hover:bg-primary hover:text-white'
-            onClick={() => handleAutoSync()}>
+            onClick={() => handleAutoSync(queryClient)}>
             <Youtube className="mr-2 h-4 w-4" />
             Auto sync YouTube solutions
           </Button>

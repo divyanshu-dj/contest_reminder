@@ -54,6 +54,22 @@ const fetchCodechefContests = async (): Promise<IContest[]> => {
 
         console.log(data.future_contests.length, 'CodeChef future contests fetched');
         console.log(data.present_contests.length, 'CodeChef present contests fetched');
+        
+        // const fetchPastContests = async (offset = 600, allPastContests: any[] = []): Promise<IContest[]> => {
+        //     const pastUrl = `https://www.codechef.com/api/list/contests/past?sort_by=START&sorting_order=desc&offset=${offset}&mode=all`;
+        //     const { data } = await axios.get<any>(pastUrl);
+        //     // console.log(data.contests)
+        //     if (offset == 700) {
+        //         console.log(`Fetched ${offset} ${allPastContests.length} past contests.`);
+        //         return allPastContests; 
+        //     }
+        //     console.log(allPastContests.length, ' ', offset, 'ALL CodeChef past contests fetched');
+        //     return fetchPastContests(offset + 20, [...allPastContests, ...data.contests]);
+        // };
+        
+        // const pastContests = await fetchPastContests();
+
+        // console.log(pastContests.length, 'CodeChef past contests fetched');
         console.log(data.past_contests.length, 'CodeChef past contests fetched');
 
         const processContest = (contest: any, status: string) => {
@@ -88,6 +104,7 @@ const fetchCodechefContests = async (): Promise<IContest[]> => {
             ...(data.future_contests?.map((c: any) => processContest(c, "UPCOMING")) || []),
             ...(data.present_contests?.map((c: any) => processContest(c, "ONGOING")) || []),
             ...(data.past_contests?.map((c: any) => processContest(c, "COMPLETED")) || [])
+            // ...(pastContests?.map((c: any) => processContest(c, "COMPLETED")) || [])
         ].filter(Boolean);
 
         return contests;
@@ -168,17 +185,18 @@ const fetchAllContests = async () => {
         const contests = [...codeforces, ...codechef, ...leetcode];
         console.log('All contests fetched:', contests.length);
 
-        await Promise.all(contests.map(contest =>
-            Contest.findOneAndUpdate(
-                { contestId: contest.contestId, name: contest.name, platform: contest.platform },
-                contest,
-                { upsert: true, new: true }
-            )
-        ));
-        
-
+        await Promise.all(contests.map(async (contest) => {
+            try {
+                await Contest.findOneAndUpdate(
+                    { contestId: contest.contestId },
+                    { $set: contest },
+                    { upsert: true, new: true }
+                );
+            } catch (error) {
+                console.error(`Failed to update contest ${contest.contestId}:`, error);
+            }
+        }));
         console.log('Contests updated successfully!');
-    
       } catch (error) {
         console.error('Error fetching contests:', error);
         return [];
