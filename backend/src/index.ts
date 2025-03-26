@@ -1,6 +1,5 @@
 import express from 'express';
 import cors from 'cors';
-// import contestRoutes from './routes/contestRoutes';
 import { Contest } from './model/Contest';
 import connectDB from './config/db';
 import { youtubeSolution } from './util/youtubeSolution';
@@ -13,9 +12,21 @@ connectDB();
 
 app.get('/api/contests', async (req, res) => {
     try {
-        const contests = await Contest.find();
-        console.log("Contests fetched:", contests.length);
-        res.status(200).json(contests);
+        let offset = parseInt(req.query?.offset as string) || 0;
+        let limit = parseInt(req.query?.limit as string) || 50;
+
+        const contests = await Contest.find({})
+            .sort({ startTime: 1 })  // Sort by startTime
+            .skip(offset)
+            .limit(limit);
+
+        const totalContests = await Contest.countDocuments();
+        
+        // console.log("Contests fetched:", contests.length);
+        res.json({
+            contests,
+            hasMore: offset + limit < totalContests
+        });
     } catch (error) {
         console.error("Error fetching contests:", error);
         res.status(500).json({ error: "Failed to fetch contests" });
