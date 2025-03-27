@@ -23,13 +23,3 @@ export interface ContestFilter {
   search: string;
 }
 
-export interface UseContestsReturn {
-  contests: Contest[];
-  filteredContests: Contest[];
-  groupedContests: Record<Contest['status'], Contest[]>;
-  isLoading: boolean;
-  error: Error | null;
-  filter: ContestFilter;
-  setFilter: React.Dispatch<React.SetStateAction<ContestFilter>>;
-  togglePlatformFilter: (platform: Platform) => void;
-}

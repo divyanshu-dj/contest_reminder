@@ -2,25 +2,35 @@
 import { Contest } from './types';
 import axios from 'axios';
 import { toast } from '@/components/ui/use-toast';
-import { QueryClient } from "@tanstack/react-query";
 
+const client =  'http://localhost:5000';
 
-const client = 'http://localhost:5000';
-
-export const fetchAllContests = async (): Promise<Contest[]> => {
+export const fetchContests = async ({ pageParam = 0 }): Promise<{ contests: Contest[]; nextOffset: number; hasMore: boolean }> => {
   try {
-    const response = await axios(`${client}/api/contests`);
+    const response = await axios(`${client}/api/contests?offset=${pageParam}&limit=50`);
     const data = response.data;
 
     if (!data) {
       console.error('Invalid API response:', data);
-      return [];
+      return { 
+        contests: [], 
+        nextOffset: pageParam, 
+        hasMore: false,
+      };
     }
 
-    return data
+    return { 
+      contests: data.contests, 
+      nextOffset: pageParam + 50, 
+      hasMore: data.hasMore 
+    }
   } catch (error) {
     console.error('Error fetching contests:', error);
-    return [];
+    return { 
+      contests: [], 
+      nextOffset: pageParam, 
+      hasMore: false,
+    };
   }
 };
 

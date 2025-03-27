@@ -16,12 +16,12 @@ app.get('/api/contests', async (req, res) => {
         let limit = parseInt(req.query?.limit as string) || 50;
 
         const contests = await Contest.find({})
-            .sort({ startTime: 1 })  // Sort by startTime
+            .sort({ startTime: -1 })  // Sort by startTime
             .skip(offset)
             .limit(limit);
 
         const totalContests = await Contest.countDocuments();
-        
+
         // console.log("Contests fetched:", contests.length);
         res.json({
             contests,

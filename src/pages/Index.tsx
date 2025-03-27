@@ -1,4 +1,6 @@
 
+import { useEffect } from 'react';
+import { useInView } from 'react-intersection-observer';
 import { useContests } from '@/hooks/useContests';
 import Header from '@/components/Header';
 import ContestList from '@/components/ContestList';
@@ -9,14 +11,26 @@ import GoogleCalendarSync from '@/components/GoogleCalendarSync';
 const Index = () => {
   const { 
     contests,
+    filteredContests,
     groupedContests,
     isLoading,
     error,
     filter,
     setFilter,
-    togglePlatformFilter
+    togglePlatformFilter,
+    // Exposed these for infinite scroll
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage
   } = useContests();
   
+  // const { ref, inView } = useInView();
+  // useEffect(() => {
+  //   if (inView && hasNextPage && !isFetchingNextPage) {
+  //     fetchNextPage();
+  //   }
+  // }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
   // Render loading skeleton
   if (isLoading && contests.length === 0) {
     return (
@@ -93,9 +107,12 @@ const Index = () => {
         <ContestList 
           title="Past Contests" 
           contests={COMPLETED} 
-          initialDisplayCount={6}
+          initialDisplayCount={15}
           emptyMessage="No past contests match your filters"
         />
+        {/* This invisible div triggers loading more contests when scrolled into view */}
+        {/* <div ref={ref} className="h-10" />
+        {isFetchingNextPage && <p className="text-center mt-4">Loading more contests...</p>} */}
       </main>
     </div>
   );
