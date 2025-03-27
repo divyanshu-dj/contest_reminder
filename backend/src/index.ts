@@ -13,7 +13,7 @@ connectDB();
 app.get('/api/contests', async (req, res) => {
     try {
         let offset = parseInt(req.query?.offset as string) || 0;
-        let limit = parseInt(req.query?.limit as string) || 50;
+        let limit = parseInt(req.query?.limit as string) || 30;
 
         const contests = await Contest.find({})
             .sort({ startTime: -1 })  // Sort by startTime

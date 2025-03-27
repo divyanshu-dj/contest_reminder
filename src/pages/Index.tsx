@@ -7,6 +7,7 @@ import ContestList from '@/components/ContestList';
 import FilterSection from '@/components/FilterSection';
 import { Skeleton } from '@/components/ui/skeleton';
 import GoogleCalendarSync from '@/components/GoogleCalendarSync';
+import ContestCard from '@/components/ContestCard';
 
 const Index = () => {
   const { 
@@ -24,12 +25,12 @@ const Index = () => {
     isFetchingNextPage
   } = useContests();
   
-  // const { ref, inView } = useInView();
-  // useEffect(() => {
-  //   if (inView && hasNextPage && !isFetchingNextPage) {
-  //     fetchNextPage();
-  //   }
-  // }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
+  const { ref, inView } = useInView();
+  useEffect(() => {
+    if (inView && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   // Render loading skeleton
   if (isLoading && contests.length === 0) {
@@ -104,15 +105,18 @@ const Index = () => {
           emptyMessage="No upcoming contests match your filters"
         />
         
-        <ContestList 
-          title="Past Contests" 
-          contests={COMPLETED} 
-          initialDisplayCount={15}
-          emptyMessage="No past contests match your filters"
-        />
-        {/* This invisible div triggers loading more contests when scrolled into view */}
-        {/* <div ref={ref} className="h-10" />
-        {isFetchingNextPage && <p className="text-center mt-4">Loading more contests...</p>} */}
+        {/* Completed contests rendered with infinite scrolling */}
+        <div className="mb-12">
+          <h2 className="text-2xl font-semibold mb-4">Past Contests</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {COMPLETED.map(contest => (
+              <ContestCard key={contest.contestId} contest={contest} />
+            ))}
+          </div>
+          {/* Sentinel div to trigger fetching next page */}
+          <div ref={ref} className="h-10" />
+          {isFetchingNextPage && <p className="text-center mt-4">Loading more contests...</p>}
+        </div>
       </main>
     </div>
   );

@@ -7,7 +7,7 @@ const client =  'http://localhost:5000';
 
 export const fetchContests = async ({ pageParam = 0 }): Promise<{ contests: Contest[]; nextOffset: number; hasMore: boolean }> => {
   try {
-    const response = await axios(`${client}/api/contests?offset=${pageParam}&limit=50`);
+    const response = await axios(`${client}/api/contests?offset=${pageParam}&limit=30`);
     const data = response.data;
 
     if (!data) {
@@ -21,7 +21,7 @@ export const fetchContests = async ({ pageParam = 0 }): Promise<{ contests: Cont
 
     return { 
       contests: data.contests, 
-      nextOffset: pageParam + 50, 
+      nextOffset: pageParam + 30, 
       hasMore: data.hasMore 
     }
   } catch (error) {
