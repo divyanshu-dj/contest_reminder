@@ -110,9 +110,15 @@ POST /api/contests/sync
    - Frontend: `http://localhost:5173`
 
 ## 🔮 Future Plans
-- 🛠 Fix **CodeChef contest fetching** bugs.
-- 📥 Auto-fetch YouTube solutions for all contests.
-- 🔔 Enable **auto Google Calendar sync** for new contests.
+   - 🗄️ Implement Redis for caching and improved performance
+   - 📨 Add RabbitMQ for reliable message queuing and asynchronous processing
+   - 🔗 Connect and integrate user coding profiles from multiple platforms
+   - 🎴 Create custom cards displaying user statistics and achievements
+   - 📊 Build comprehensive DSA dashboard for tracking progress
+   - 🗺️ Develop interactive DSA Roadmap for guided learning
+   - 📈 Implement Skill Gap Analysis to identify improvement areas
+   - 📥 Auto-fetch YouTube solutions for all contests
+   - 🔔 Enable auto Google Calendar sync for new contests
 
 ## 👥 Contributors
 - **Divyanshu Kumar Jha** - [GitHub](https://github.com/your-profile)
