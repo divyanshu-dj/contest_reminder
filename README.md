@@ -13,6 +13,8 @@
 - 🗓 **Google Calendar Integration**:
   - ⏰ Add upcoming contests as reminders.
   - 🔁 Auto-sync new contests if access is granted.
+- 📜 Infinite Scrolling (for completed contests).
+- 🚀 Optimized Performance with Redis Caching.
 - 🌗 **Dark/Light mode toggle**.
 - 📱 **Mobile & Tablet responsive UI**.
 
@@ -21,33 +23,35 @@
 
 ## 🛠 Tech Stack
 - **Frontend:** React, Vite, TypeScript, TailwindCSS, ShadCN UI
-- **Backend:** Node.js, Express, MongoDB
-- **Database:** MongoDB (Mongoose)
+- **Backend:** Node.js, Express, MongoDB, Redis
+- **Database:** MongoDB (Mongoose), Redis (ioredis)
 - **APIs & Libraries:**
   - `@tanstack/react-query` for data fetching
   - `axios` for API requests
   - `react-router-dom` for navigation
-  - `dotenv` for environment variables
   - `cron` for scheduled contest updates
 
 ## 🔌 API Endpoints
 ### 📢 Fetch all contests
 ```http
-GET /api/contests
+GET /api/contests?offset=0&limit=30
 ```
 **Response:**
 ```json
-[
-  {
-    "contestId": "12345",
-    "platform": "Codeforces",
-    "name": "Codeforces Round 999",
-    "startTime": "2025-03-20T14:00:00Z",
-    "duration": "2h",
-    "status": "upcoming",
-    "youtubeVideo": "https://youtu.be/example"
-  }
-]
+{
+  "contests": [
+    {
+      "contestId": "12345",
+      "platform": "Codeforces",
+      "name": "Codeforces Round 999",
+      "startTime": "2025-03-20T14:00:00Z",
+      "duration": "2h",
+      "status": "upcoming",
+      "youtubeVideo": "https://youtu.be/example"
+    }
+  ],
+  "hasMore": true
+}
 ```
 
 ### ➕ Add YouTube solution manually
@@ -74,6 +78,7 @@ POST /api/contests/sync
 ### 🛠 Prerequisites
 - Node.js & npm
 - MongoDB instance
+- Redis instance (recommended for caching)
 
 ### 🚀 Steps
 1. **Clone the repository:**
@@ -91,6 +96,7 @@ POST /api/contests/sync
    ```env
    MONGO_URI=your_mongo_connection_string
    YOUTUBE_API_KEY=your_youtube_api_key
+   REDIS_URL=your_redis_connection_string
    ```
 
 4. **Run the backend:**
@@ -101,16 +107,14 @@ POST /api/contests/sync
 
 5. **Run the frontend:**
    ```sh
-   cd frontend
    npm run dev
    ```
 
 6. **Access the application:**
    - Backend: `http://localhost:5000`
-   - Frontend: `http://localhost:5173`
+   - Frontend: `http://localhost:8080/`
 
 ## 🔮 Future Plans
-   - 🗄️ Implement Redis for caching and improved performance
    - 📨 Add RabbitMQ for reliable message queuing and asynchronous processing
    - 🔗 Connect and integrate user coding profiles from multiple platforms
    - 🎴 Create custom cards displaying user statistics and achievements
@@ -121,7 +125,7 @@ POST /api/contests/sync
    - 🔔 Enable auto Google Calendar sync for new contests
 
 ## 👥 Contributors
-- **Divyanshu Kumar Jha** - [GitHub](https://github.com/your-profile)
+- **Divyanshu Kumar Jha** - [GitHub](https://github.com/divyanshu-dj)
 
 ## 📜 License
 This project is licensed under the MIT License.
