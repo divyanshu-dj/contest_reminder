@@ -44,43 +44,46 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           script: |
             # WITH DOCKER-COMPOSE
-            cd /home/ubuntu/contest_reminder
+            # cd /home/ubuntu/contest_reminder
 
-            echo "MONGO_URI=${{ secrets.MONGO_URI }}" > backend/.env
-            echo "REDIS_URL=${{ secrets.REDIS_URL }}" >> backend/.env
-            echo "REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}" >> backend/.env
-            echo "YOUTUBE_API_KEY=${{ secrets.YOUTUBE_API_KEY }}" >> backend/.env
-            echo "NODE_ENV=production" >> backend/.env
+            # echo "MONGO_URI=${{ secrets.MONGO_URI }}" > backend/.env
+            # echo "REDIS_URL=${{ secrets.REDIS_URL }}" >> backend/.env
+            # echo "REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}" >> backend/.env
+            # echo "YOUTUBE_API_KEY=${{ secrets.YOUTUBE_API_KEY }}" >> backend/.env
+            # echo "NODE_ENV=production" >> backend/.env
             
-            sudo docker-compose down
-            sudo docker-compose pull
+            # sudo docker-compose down
+            # sudo docker-compose pull
             
-            sudo docker-compose up -d --build
+            # sudo docker-compose up -d --build
 
 
-            
+
             # WITHOUT DOCKER-COMPOSE
-            # # Pull latest images from Docker Hub
-            # sudo docker pull divyanshujha/contest-backend:latest
-            # sudo docker pull divyanshujha/contest-frontend:latest
-            
-            # # Stop and remove the existing containers if they exist
-            # sudo docker stop contest_backend || true
-            # sudo docker rm contest_backend || true
+            # Stop and remove old containers
+            sudo docker stop contest_backend || true
+            sudo docker rm contest_backend || true
+            sudo docker stop contest_frontend || true
+            sudo docker rm contest_frontend || true
 
-            # sudo docker stop contest_frontend || true
-            # sudo docker rm contest_frontend || true
-            
-            # # Run docker-compose to start the updated services
-            # sudo docker run -d --name contest_backend -p 5000:5000 \
-            #   -e MONGO_URI="${{ secrets.MONGO_URI }}" \
-            #   -e YOUTUBE_API_KEY="${{ secrets.YOUTUBE_API_KEY }}" \
-            #   -e REDIS_URL="${{ secrets.REDIS_URL }}" \
-            #   -e REDIS_PASSWORD="${{ secrets.REDIS_PASSWORD }}" \
-            #   -e NODE_ENV=production \
-            #   divyanshujha/contest-backend:latest
+            # Pull new images
+            sudo docker pull divyanshujha/contest-backend:latest
+            sudo docker pull divyanshujha/contest-frontend:latest
 
-            # sudo docker run -d --name contest_frontend -p 3000:3000 divyanshujha/contest-frontend:latest
+            # Run backend
+            sudo docker run -d --name contest_backend \
+              -p 5000:5000 \
+              -e MONGO_URI="${{ secrets.MONGO_URI }}" \
+              -e REDIS_URL="${{ secrets.REDIS_URL }}" \
+              -e REDIS_PASSWORD="${{ secrets.REDIS_PASSWORD }}" \
+              -e YOUTUBE_API_KEY="${{ secrets.YOUTUBE_API_KEY }}" \
+              -e NODE_ENV=production \
+              divyanshujha/contest-backend:latest
+
+            # Run frontend
+            sudo docker run -d --name contest_frontend \
+              -p 3000:3000 \
+              divyanshujha/contest-frontend:latest
 
 
 
