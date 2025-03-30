@@ -174,14 +174,11 @@ POST /api/contests/sync
 
 ## 🔮 Future Plans
 
-- 📨 Add RabbitMQ for reliable message queuing and asynchronous processing.
+- 📨 Add RabbitMQ for cron job (contest fetching and yt video sync).
 - 🔗 Connect and integrate user coding profiles from multiple platforms.
 - 🎴 Create custom cards displaying user statistics and achievements.
-- 📊 Build a comprehensive DSA dashboard for tracking progress.
-- 🗺️ Develop an interactive DSA Roadmap for guided learning.
+- 🗺️ Develop an interactive DSA Weekly Roadmap like a checklist for guided learning which can be printed.
 - 📈 Implement Skill Gap Analysis to identify improvement areas.
-- 📥 Auto-fetch YouTube solutions for all contests.
-- 🔔 Enable auto Google Calendar sync for new contests.
 
 ## 👥 Contributors
 
