@@ -3,7 +3,7 @@ import { Contest } from './types';
 import axios from 'axios';
 import { toast } from '@/components/ui/use-toast';
 
-const client = "";
+const client = "http://localhost:5000";
 
 export const fetchContests = async ({ pageParam = 0 }): Promise<{ contests: Contest[]; nextOffset: number; hasMore: boolean }> => {
   try {
