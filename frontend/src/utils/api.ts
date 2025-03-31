@@ -3,11 +3,10 @@ import { Contest } from './types';
 import axios from 'axios';
 import { toast } from '@/components/ui/use-toast';
 
-const client = "http://localhost:5000";
 
 export const fetchContests = async ({ pageParam = 0 }): Promise<{ contests: Contest[]; nextOffset: number; hasMore: boolean }> => {
   try {
-    const response = await axios(`${client}/api/contests?offset=${pageParam}&limit=30`);
+    const response = await axios(`/api/contests?offset=${pageParam}&limit=30`);
     const data = response.data;
 
     if (!data) {
@@ -36,7 +35,7 @@ export const fetchContests = async ({ pageParam = 0 }): Promise<{ contests: Cont
 
 export const addSolutionUrl = async(contestId: string, url: string): Promise<Contest> => {
   try {
-    const {data} = await axios.patch(`${client}/api/contests/${contestId}/solution`, {url});
+    const {data} = await axios.patch(`/api/contests/${contestId}/solution`, {url});
     
     return data;
   } catch (error) {
@@ -47,7 +46,7 @@ export const addSolutionUrl = async(contestId: string, url: string): Promise<Con
 
 export const handleAutoSync = async (queryClient) => {
   try {
-    const { data } = await axios.post(`${client}/api/contests/sync`);
+    const { data } = await axios.post(`/api/contests/sync`);
 
     if (!data) throw new Error("Invalid API response");
 
