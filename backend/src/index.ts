@@ -8,7 +8,17 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const redis = new Redis(`${process.env.REDIS_URL}`);
+const redis = new Redis(process.env.REDIS_URL || "", {
+    retryStrategy(times) {
+      return Math.min(times * 50, 2000);
+    },
+    maxRetriesPerRequest: 5, 
+  });
+
+redis.on('error', (err) => {
+    console.error('❌ Redis Error (event):', err);
+});
+
 
 redis.ping()
     .then(res => console.log("✅ Redis Connected:", res))
@@ -105,6 +115,6 @@ app.post('/api/contests/sync', async (req, res) => {
     }
 });
 
-app.listen(5000, () => console.log('🚀 Backend running on http://localhost:5000'));
+app.listen(5000, () => console.log('🚀 Backend running'));
 
 require('./util/cron');

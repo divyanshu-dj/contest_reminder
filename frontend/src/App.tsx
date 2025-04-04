@@ -1,8 +1,10 @@
 
 import { Toaster } from "@/components/ui/toaster";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { BookmarkProvider } from "./contexts/BookmarkContext";
+import { trackPageview } from "./analytics";
+import { useEffect } from "react";
 
 import Index from "./pages/Index";
 import BookmarksPage from "./pages/BookmarksPage";
@@ -20,11 +22,23 @@ const queryClient = new QueryClient({
   },
 });
 
+
+function AnalyticsTracker() {
+  const location = useLocation();
+
+  useEffect(() => {
+    trackPageview(location.pathname + location.search);
+  }, [location]);
+
+  return null;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
       <BookmarkProvider>
         <Toaster />
         <BrowserRouter>
+          <AnalyticsTracker />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/bookmarks" element={<BookmarksPage />} />
