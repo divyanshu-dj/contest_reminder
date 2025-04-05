@@ -115,6 +115,6 @@ app.post('/api/contests/sync', async (req, res) => {
     }
 });
 
-app.listen(5000, () => console.log('🚀 Backend running'));
+app.listen(5000, () => console.log('🚀 Backend running  '));
 
 require('./util/cron');

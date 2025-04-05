@@ -12,23 +12,32 @@
 
 ## ✨ Features
 
-- 📅 **Fetch and display** upcoming, ongoing, and past contests.
-- 🎯 **Filters** to view contests from selected platforms.
-- ⭐ **Bookmarking** contests for easy access.
-- 🎥 **YouTube solution integration**:
-  - 📌 Manually add solution links.
-  - 🔄 Automatically sync solutions from **TLE Eliminator**.
-- 🗓 **Google Calendar Integration**:
-  - ⏰ Add upcoming contests as reminders.
-  - 🔁 Auto-sync new contests if access is granted.
-- 📜 **Infinite Scrolling** for completed contests.
-- 📤 **Chunked Data Transfer** for optimal backend performance.
-- 🚀 **Optimized Performance** with Redis Caching.
-- 🌗 **Dark/Light mode toggle**.
-- 📱 **Mobile & Tablet responsive UI**.
-- 🐳 **Dockerized setup** for easy deployment.
-- 🔄 **CI/CD Pipeline** for automated testing and deployment.
-- 🔁 **Nginx as Reverse Proxy** for better performance.
+- 📅 Contest Management
+   - 📅 **Fetch and display** upcoming, ongoing, and past contests.
+   - 🎯 **Apply filters** to view contests from selected platforms.
+   - ⭐ **Bookmark contests** for quick and easy access.
+- 🎥 YouTube Solution Integration
+   - 📌 **Manually add solution links.**
+   - 🔄 **Automatically sync solutions** from **TLE Eliminator**.
+- 🗓 Google Calendar Integration
+   - ⏰ **Add upcoming contests** as reminders.
+   - 🔁 **Auto-sync new contests** when access is granted.
+- 🎨 User Interface
+   - 📜 **Infinite scrolling** for completed contests.
+   - 🌗 **Dark/Light mode toggle.**
+   - 📱 **Mobile and tablet responsive design.**
+- 🚀 Performance Optimization
+   - 🚀 **Caching of Contests** using Redis.
+   - 📤 **Chunked data transfer** for optimal backend performance.
+- 🛠️ Deployment and Infrastructure
+   - 🐳 **Dockerized setup** for seamless deployment.
+   - 🔄 **CI/CD pipeline** for automated testing and deployment.
+   - 🔁 **Nginx as a reverse proxy** for improved performance.
+- 🔒 Security
+   - ☠️ **DDoS protection and Web Application Firewall (WAF)** using Cloudflare.
+   - 🔐 **SSL/TLS encryption** for secure HTTPS connections.
+- 📊 Analytics
+   - 📊 **Google Analytics integration** for insights and tracking.
 
 ## 🛠 Tech Stack
 
