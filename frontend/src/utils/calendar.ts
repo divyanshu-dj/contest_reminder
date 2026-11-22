@@ -32,7 +32,39 @@ const foldLine = (line: string): string => {
   return parts.join('\r\n ');
 };
 
-export const buildIcs = (contests: Contest[], now: Date = new Date()): string => {
+/** Reminder offsets offered in the UI, in minutes before the start time. */
+export const REMINDER_OPTIONS: { minutes: number; label: string }[] = [
+  { minutes: 10, label: '10 minutes before' },
+  { minutes: 30, label: '30 minutes before' },
+  { minutes: 60, label: '1 hour before' },
+  { minutes: 180, label: '3 hours before' },
+  { minutes: 360, label: '6 hours before' },
+  { minutes: 1440, label: '1 day before' },
+  { minutes: 2880, label: '2 days before' },
+];
+
+export const describeReminder = (minutes: number): string =>
+  REMINDER_OPTIONS.find(option => option.minutes === minutes)?.label
+    ?? (minutes === 0 ? 'At start time' : `${minutes} minutes before`);
+
+/**
+ * A VALARM per requested offset. Negative duration means "before the start".
+ * Google honours these on a one-off .ics import; for continuous syncing the
+ * Calendar API path sets reminders directly on each event instead.
+ */
+const alarmBlock = (minutes: number, summary: string): string[] => [
+  'BEGIN:VALARM',
+  'ACTION:DISPLAY',
+  `TRIGGER:-PT${minutes}M`,
+  `DESCRIPTION:${summary}`,
+  'END:VALARM',
+];
+
+export const buildIcs = (
+  contests: Contest[],
+  now: Date = new Date(),
+  reminderMinutes: number[] = [60]
+): string => {
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
@@ -51,6 +83,8 @@ export const buildIcs = (contests: Contest[], now: Date = new Date()): string =>
       `SUMMARY:${escapeIcsText(`[${contest.platform.toUpperCase()}] ${contest.name}`)}`,
       `DESCRIPTION:${escapeIcsText(`Coding contest on ${contest.platform}\n${contest.url}`)}`,
       `URL:${escapeIcsText(contest.url)}`,
+      ...reminderMinutes.flatMap(minutes =>
+        alarmBlock(minutes, escapeIcsText(`${contest.name} starts soon`))),
       'END:VEVENT',
     );
   }
@@ -67,8 +101,12 @@ export const buildIcs = (contests: Contest[], now: Date = new Date()): string =>
  * dropped most of the selection. A downloaded .ics also imports into Apple
  * Calendar and Outlook, not just Google.
  */
-export const downloadIcs = (contests: Contest[], filename = 'contests.ics'): void => {
-  const blob = new Blob([buildIcs(contests)], { type: 'text/calendar;charset=utf-8' });
+export const downloadIcs = (
+  contests: Contest[],
+  reminderMinutes: number[] = [60],
+  filename = 'contests.ics'
+): void => {
+  const blob = new Blob([buildIcs(contests, new Date(), reminderMinutes)], { type: 'text/calendar;charset=utf-8' });
   const url = URL.createObjectURL(blob);
 
   const link = document.createElement('a');

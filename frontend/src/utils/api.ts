@@ -94,3 +94,49 @@ export const addSolutionUrl = async (contestId: string, url: string): Promise<Co
     return null;
   }
 };
+
+// ---------------------------------------------------------------- calendar sync
+
+export interface CalendarStatus {
+  connected: boolean;
+  email?: string;
+  platforms?: string[];
+  reminderMinutes?: number[];
+  lastSyncedAt?: string | null;
+  lastSyncError?: string | null;
+}
+
+export const fetchCalendarConfig = async (): Promise<{ available: boolean; reminderPresets: number[] }> => {
+  try {
+    const { data } = await axios.get(`${client}/api/calendar/config`);
+    return { available: Boolean(data?.available), reminderPresets: data?.reminderPresets ?? [] };
+  } catch {
+    return { available: false, reminderPresets: [] };
+  }
+};
+
+export const fetchCalendarStatus = async (): Promise<CalendarStatus> => {
+  try {
+    const { data } = await axios.get(`${client}/api/calendar/me`);
+    return data ?? { connected: false };
+  } catch {
+    return { connected: false };
+  }
+};
+
+export const saveCalendarPreferences = async (
+  platforms: string[],
+  reminderMinutes: number[]
+): Promise<{ resynced: number; resyncError: string | null }> => {
+  const { data } = await axios.patch(`${client}/api/calendar/preferences`, { platforms, reminderMinutes });
+  return { resynced: data?.resynced ?? 0, resyncError: data?.resyncError ?? null };
+};
+
+export const disconnectCalendar = async (): Promise<void> => {
+  await axios.delete(`${client}/api/calendar/disconnect`);
+};
+
+export const resyncCalendar = async (): Promise<number> => {
+  const { data } = await axios.post(`${client}/api/calendar/sync`);
+  return data?.synced ?? 0;
+};

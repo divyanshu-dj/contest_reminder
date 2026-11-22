@@ -16,6 +16,7 @@ import {
     parseSearch,
     parseStatus,
 } from './util/contestQuery';
+import { calendarRouter } from './util/calendarRoutes';
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -38,8 +39,15 @@ app.use(express.json({ limit: '16kb' }));
 if (!process.env.ADMIN_TOKEN) {
     console.warn('⚠️  ADMIN_TOKEN is not set - the admin endpoint will reject all requests');
 }
+if (!process.env.GOOGLE_CLIENT_ID || !process.env.TOKEN_ENCRYPTION_KEY) {
+    console.warn('⚠️  Google Calendar sync is not configured - /api/calendar will report unavailable');
+}
 
 connectDB();
+
+// Calendar connect/callback are browser redirects and the rest are small writes,
+// so one modest per-IP budget covers the whole group.
+app.use('/api/calendar', rateLimit(redis, { prefix: 'calendar', windowSec: 60, max: 30 }), calendarRouter);
 
 app.get('/api/contests', rateLimit(redis, { prefix: 'read', windowSec: 60, max: 120 }), async (req, res) => {
     try {

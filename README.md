@@ -20,8 +20,10 @@
    - 🔄 **Automatically sync solutions** from **TLE Eliminator** playlists on the 6-hourly cron.
    - 📌 **Manually add a solution link** for the contests the matcher misses (admin only).
 - 🗓 Calendar Integration
-   - ⏰ **Add a single contest** via a prefilled Google Calendar event.
-   - 📋 **Export by platform** as one `.ics` file — imports into Google, Apple and Outlook.
+   - 🔄 **Connect Google Calendar once** and newly announced contests are added automatically.
+   - ⏰ **Choose your reminder times** — up to five per contest, from 10 minutes to 2 days before.
+   - 🎯 **Pick which platforms** get synced.
+   - 📋 **Or export an `.ics` file** with the same reminders, for Google, Apple or Outlook.
 - 🎨 User Interface
    - 📜 **Infinite scrolling** for completed contests.
    - 🌗 **Dark/Light mode toggle.**
@@ -122,6 +124,52 @@ Authorization: Bearer $ADMIN_TOKEN
 }
 ```
 
+### 🗓 Google Calendar sync
+
+Connecting a Google account creates a **separate calendar** named "Contest Reminder" and
+writes upcoming contests into it, with the reminder offsets the user chose. The cron adds
+newly announced contests on its next run, so no further action is needed.
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /api/calendar/config` | Whether sync is configured on this server |
+| `GET /api/calendar/connect` | Starts the Google consent flow |
+| `GET /api/calendar/callback` | Google redirects here; stores the account and syncs immediately |
+| `GET /api/calendar/me` | Connection state and current preferences |
+| `PATCH /api/calendar/preferences` | Change platforms and reminder times, then re-sync |
+| `POST /api/calendar/sync` | Sync on demand |
+| `DELETE /api/calendar/disconnect` | Revokes the token at Google and deletes the record |
+
+Design notes worth knowing before changing any of this:
+
+- **Scope is `calendar.app.created`**, which grants access only to calendars this app
+  itself created. Connecting cannot read or modify a user's existing calendars.
+- **Event IDs are `sha256(contestId)`.** Google accepts client-supplied IDs in base32hex
+  (`a-v`, `0-9`), and a hex digest satisfies that by construction — so re-syncing updates
+  the same event instead of creating a duplicate, with nothing to store.
+- **Refresh tokens are encrypted at rest** with AES-256-GCM under `TOKEN_ENCRYPTION_KEY`.
+  A read-only database leak does not yield usable calendar credentials. If the key is
+  missing the feature refuses to operate rather than storing tokens in plaintext.
+- **Sessions live in Redis**, not in a JWT, so "Disconnect" genuinely ends them. The
+  cookie is `HttpOnly` and `SameSite=Lax`; `Secure` is added only when the redirect URI is
+  https, because a browser discards a `Secure` cookie on an insecure origin and local
+  development would break in a way that looks like a logic bug.
+- **`invalid_grant` deletes the subscription.** That response means the user revoked
+  access, so retrying forever would be pointless.
+
+#### Google Cloud setup (required before this works)
+
+1. Create a project at [console.cloud.google.com](https://console.cloud.google.com/).
+2. Enable the **Google Calendar API**.
+3. Configure the OAuth consent screen. Add yourself as a test user while the app is
+   unverified; check the **Data Access** page for whether Google classifies the scope as
+   sensitive, since that determines whether verification is needed for public use.
+4. Create an **OAuth 2.0 Client ID** of type *Web application*, and add your callback as
+   an authorised redirect URI — exactly, including the path:
+   `http://localhost:5055/api/calendar/callback` for development.
+5. Put the client ID and secret in `backend/.env`, and generate the encryption key with
+   `openssl rand -hex 32`.
+
 ### 🔐 Admin authentication
 
 The one write endpoint is gated by a shared bearer token read from `ADMIN_TOKEN`.
@@ -164,6 +212,15 @@ a revocable Redis-backed `httpOnly` session cookie.
    #   openssl rand -hex 32
    # If unset, the admin endpoints reject every request.
    ADMIN_TOKEN=your_admin_token
+
+   # Google Calendar sync. Optional: without these the API reports the feature
+   # unavailable and the frontend offers the .ics download instead.
+   GOOGLE_CLIENT_ID=your_oauth_client_id
+   GOOGLE_CLIENT_SECRET=your_oauth_client_secret
+   GOOGLE_REDIRECT_URI=http://localhost:5055/api/calendar/callback
+   FRONTEND_ORIGIN=http://localhost:8080
+   # Encrypts stored refresh tokens. Generate with: openssl rand -hex 32
+   TOKEN_ENCRYPTION_KEY=64_hex_characters
    ```
 3. **Run the application using Docker Compose:**
    ```sh
