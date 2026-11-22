@@ -3,9 +3,19 @@ import cors from 'cors';
 import { Contest } from './model/Contest';
 import connectDB from './config/db';
 import { redis, invalidateContestCache, contestCacheVersion, cacheGet, cacheSet } from './config/redis';
-import { statusFor } from './util/status';
-import { clampPagination, isAllowedYoutubeUrl } from './util/validate';
+import { isAllowedYoutubeUrl } from './util/validate';
 import { rateLimit, requireAdmin } from './util/guards';
+import { statusFor } from './util/status';
+import {
+    buildContestFilter,
+    cacheKeyFor,
+    clampLimit,
+    decodeCursor,
+    encodeCursor,
+    parsePlatforms,
+    parseSearch,
+    parseStatus,
+} from './util/contestQuery';
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -33,21 +43,39 @@ connectDB();
 
 app.get('/api/contests', rateLimit(redis, { prefix: 'read', windowSec: 60, max: 120 }), async (req, res) => {
     try {
-        const { offset, limit } = clampPagination(req.query?.offset, req.query?.limit, PAGE_SIZE);
-        const cacheKey = `contests:v${await contestCacheVersion()}:${offset}:${limit}`;
+        const limit = clampLimit(req.query?.limit, PAGE_SIZE);
+        const query = {
+            platforms: parsePlatforms(req.query?.platforms),
+            status: parseStatus(req.query?.status),
+            search: parseSearch(req.query?.q),
+            cursor: decodeCursor(req.query?.cursor),
+        };
 
-        const cached = await cacheGet(cacheKey);
-        let page: { contests: any[]; hasMore: boolean };
+        const cacheKey = cacheKeyFor(query, limit, await contestCacheVersion());
+        const cached = cacheKey ? await cacheGet(cacheKey) : null;
+
+        let page: { contests: any[]; nextCursor: string | null; hasMore: boolean };
 
         if (cached) {
             page = JSON.parse(cached);
         } else {
-            const [docs, totalContests] = await Promise.all([
-                Contest.find({}).sort({ startTime: -1 }).skip(offset).limit(limit).lean(),
-                Contest.countDocuments(),
-            ]);
-            page = { contests: docs, hasMore: offset + limit < totalContests };
-            await cacheSet(cacheKey, JSON.stringify(page), CACHE_EXPIRY);
+            // One extra row tells us whether another page exists, which replaces
+            // a countDocuments() on every cache miss.
+            const docs = await Contest.find(buildContestFilter(query, new Date()))
+                .sort({ startTime: -1, _id: -1 })
+                .limit(limit + 1)
+                .lean();
+
+            const hasMore = docs.length > limit;
+            const rows = hasMore ? docs.slice(0, limit) : docs;
+
+            page = {
+                contests: rows,
+                nextCursor: hasMore && rows.length > 0 ? encodeCursor(rows[rows.length - 1]) : null,
+                hasMore,
+            };
+
+            if (cacheKey) await cacheSet(cacheKey, JSON.stringify(page), CACHE_EXPIRY);
         }
 
         // Status is attached after the cache, never inside it. Caching a derived
@@ -59,6 +87,7 @@ app.get('/api/contests', rateLimit(redis, { prefix: 'read', windowSec: 60, max: 
                 ...contest,
                 status: statusFor(new Date(contest.startTime), new Date(contest.endTime), now),
             })),
+            nextCursor: page.nextCursor,
             hasMore: page.hasMore,
         });
     } catch (error) {

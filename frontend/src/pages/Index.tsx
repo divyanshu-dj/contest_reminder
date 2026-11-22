@@ -12,7 +12,6 @@ import ContestCard from '@/components/ContestCard';
 const Index = () => {
   const { 
     contests,
-    filteredContests,
     groupedContests,
     isLoading,
     error,

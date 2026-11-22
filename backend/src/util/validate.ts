@@ -1,32 +1,6 @@
 // Server-side input validation. The client-side checks in AdminForm are UX only;
 // these are the actual trust boundary.
 
-const MAX_LIMIT = 100;
-
-export interface Pagination {
-  offset: number;
-  limit: number;
-}
-
-/**
- * Clamp user-supplied pagination so `?limit=999999` can't dump the collection
- * and a negative offset can't make Mongo throw. Also bounds the number of
- * distinct Redis cache keys a caller can mint.
- */
-export const clampPagination = (
-  rawOffset: unknown,
-  rawLimit: unknown,
-  defaultLimit: number
-): Pagination => {
-  const offset = Math.floor(Number(rawOffset));
-  const limit = Math.floor(Number(rawLimit));
-
-  return {
-    offset: Number.isFinite(offset) && offset > 0 ? offset : 0,
-    limit: Number.isFinite(limit) && limit > 0 ? Math.min(limit, MAX_LIMIT) : defaultLimit,
-  };
-};
-
 const YOUTUBE_HOSTS = new Set([
   'youtube.com',
   'www.youtube.com',

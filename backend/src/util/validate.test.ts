@@ -1,17 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { clampPagination, isAllowedYoutubeUrl } from './validate';
-
-test('clampPagination bounds hostile input', () => {
-    assert.deepEqual(clampPagination('0', '30', 30), { offset: 0, limit: 30 });
-    assert.deepEqual(clampPagination(undefined, undefined, 30), { offset: 0, limit: 30 });
-    // limit is capped so a caller cannot dump the collection
-    assert.deepEqual(clampPagination('0', '999999', 30), { offset: 0, limit: 100 });
-    // negative offset would make Mongo's skip() throw
-    assert.deepEqual(clampPagination('-5', '-1', 30), { offset: 0, limit: 30 });
-    assert.deepEqual(clampPagination('abc', 'NaN', 30), { offset: 0, limit: 30 });
-    assert.deepEqual(clampPagination('1e9', '10', 30), { offset: 1e9, limit: 10 });
-});
+import { isAllowedYoutubeUrl } from './validate';
 
 test('isAllowedYoutubeUrl accepts only https YouTube links', () => {
     assert.equal(isAllowedYoutubeUrl('https://www.youtube.com/watch?v=abc'), true);
