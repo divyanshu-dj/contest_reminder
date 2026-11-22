@@ -70,6 +70,11 @@ jobs:
               -e REDIS_PASSWORD="${{ secrets.REDIS_PASSWORD }}" \
               -e YOUTUBE_API_KEY="${{ secrets.YOUTUBE_API_KEY }}" \
               -e ADMIN_TOKEN="${{ secrets.ADMIN_TOKEN }}" \
+              -e GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}" \
+              -e GOOGLE_CLIENT_SECRET="${{ secrets.GOOGLE_CLIENT_SECRET }}" \
+              -e GOOGLE_REDIRECT_URI="${{ secrets.GOOGLE_REDIRECT_URI }}" \
+              -e FRONTEND_ORIGIN="${{ secrets.FRONTEND_ORIGIN }}" \
+              -e TOKEN_ENCRYPTION_KEY="${{ secrets.TOKEN_ENCRYPTION_KEY }}" \
               -e NODE_ENV=production \
               divyanshujha/contest-backend:latest
 

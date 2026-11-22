@@ -6,7 +6,7 @@ import Header from '@/components/Header';
 import ContestList from '@/components/ContestList';
 import FilterSection from '@/components/FilterSection';
 import { Skeleton } from '@/components/ui/skeleton';
-import GoogleCalendarSync from '@/components/GoogleCalendarSync';
+import CalendarSync from '@/components/CalendarSync';
 import ContestCard from '@/components/ContestCard';
 
 const Index = () => {
@@ -79,7 +79,7 @@ const Index = () => {
       <main className="container py-6 px-4 max-w-7xl">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
           <h1 className="text-3xl font-bold text-center md:text-left">Contest Tracker</h1>
-          <GoogleCalendarSync contests={contests} />
+          <CalendarSync contests={contests} />
         </div>
         
         <FilterSection

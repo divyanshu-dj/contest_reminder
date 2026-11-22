@@ -2,6 +2,7 @@ import cron from 'node-cron';
 import fetchAllContests from './fetchContests';
 import { youtubeSolution } from './youtubeSolution';
 import { invalidateContestCache } from '../config/redis';
+import { syncAllCalendars } from './calendarSync';
 
 // Runs every 6 hours (use '*/30 * * * * *' to exercise it locally).
 const SCHEDULE = '0 */6 * * *';
@@ -18,6 +19,9 @@ const refreshContests = async (): Promise<void> => {
         await fetchAllContests();
         await youtubeSolution();
         await invalidateContestCache();
+        // Push newly announced contests to every connected Google Calendar, so
+        // a contest appearing upstream becomes a reminder without any action.
+        await syncAllCalendars();
         console.log('Cron refresh complete.');
     } catch (error) {
         // Never let a failed run take the process down with an unhandled rejection.
