@@ -54,6 +54,13 @@ jobs:
             sudo docker pull divyanshujha/contest-backend:latest
             sudo docker pull divyanshujha/contest-frontend:latest
 
+            # Migrate before the new code serves traffic. Idempotent: it only
+            # touches rows that still hold string dates or a stored status.
+            sudo docker run --rm \
+              -e MONGO_URI="${{ secrets.MONGO_URI }}" \
+              divyanshujha/contest-backend:latest \
+              node dist/util/migrate.js
+
             # Run backend
             sudo docker run -d --name contest_backend \
               -p 5000:5000 \
