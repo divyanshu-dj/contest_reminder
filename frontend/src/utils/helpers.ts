@@ -75,25 +75,6 @@ export const getPlatformDisplayName = (platform: Platform): string => {
   }
 };
 
-export const filterContests = (contests: Contest[], filter: ContestFilter): Contest[] => {
-  return contests.filter(contest => {
-    // Filter by platform
-    if (filter.platforms.length > 0 && !filter.platforms.includes(contest.platform)) {
-      return false;
-    }
-    // Filter by status
-    if (filter.status !== 'all' && filter.status !== contest.status.toLowerCase()) {
-      return false;
-    }
-    // Filter by search term
-    if (filter.search && !contest.name.toLowerCase().includes(filter.search.toLowerCase())) {
-      return false;
-    }
-    
-    return true;
-  });
-};
-
 export const sortContestsByTime = (contests: Contest[], ascending = true): Contest[] => {
   return [...contests].sort((a, b) => {
     const timeA = new Date(a.startTime).getTime();

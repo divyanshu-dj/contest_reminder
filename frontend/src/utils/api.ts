@@ -1,5 +1,5 @@
 
-import { Contest } from './types';
+import { Contest, ContestFilter } from './types';
 import axios from 'axios';
 import { toast } from '@/components/ui/use-toast';
 
@@ -40,33 +40,39 @@ const adminErrorMessage = (error: unknown): string => {
   return 'An error occurred';
 };
 
-export const fetchContests = async  ({ pageParam = 0 }): Promise<{ contests: Contest[]; nextOffset: number; hasMore: boolean }> => {
-  try {
-    const response = await axios(`${client}/api/contests?offset=${pageParam}&limit=30`);
-    const data = response.data;
+export interface ContestPage {
+  contests: Contest[];
+  nextCursor: string | null;
+  hasMore: boolean;
+}
 
-    if (!data) {
-      console.error('Invalid API response:', data);
-      return { 
-        contests: [], 
-        nextOffset: pageParam, 
-        hasMore: false,
-      };
-    }
+const PAGE_SIZE = 30;
 
-    return { 
-      contests: data.contests, 
-      nextOffset: pageParam + 30, 
-      hasMore: data.hasMore 
-    }
-  } catch (error) {
-    console.error('Error fetching contests:', error);
-    return { 
-      contests: [], 
-      nextOffset: pageParam, 
-      hasMore: false,
-    };
-  }
+/**
+ * Filtering and search happen on the server. They used to run client-side over
+ * whatever pages had been loaded, so searching for an old contest returned
+ * nothing until the user had scrolled far enough to load it, and narrowing to one
+ * platform showed a nearly empty page.
+ *
+ * Errors propagate instead of resolving to an empty list: with server-side
+ * search, a swallowed failure is indistinguishable from "no contests matched".
+ */
+export const fetchContests = async (
+  { pageParam, filter }: { pageParam?: string | null; filter: ContestFilter }
+): Promise<ContestPage> => {
+  const params = new URLSearchParams({ limit: String(PAGE_SIZE) });
+  if (filter.platforms.length > 0) params.set('platforms', filter.platforms.join(','));
+  if (filter.status !== 'all') params.set('status', filter.status);
+  if (filter.search) params.set('q', filter.search);
+  if (pageParam) params.set('cursor', pageParam);
+
+  const { data } = await axios.get(`${client}/api/contests?${params.toString()}`);
+
+  return {
+    contests: data?.contests ?? [],
+    nextCursor: data?.nextCursor ?? null,
+    hasMore: Boolean(data?.hasMore),
+  };
 };
 
 export const addSolutionUrl = async (contestId: string, url: string): Promise<Contest | null> => {

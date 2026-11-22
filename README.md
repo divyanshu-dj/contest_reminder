@@ -19,16 +19,18 @@
 - 🎥 YouTube Solution Integration
    - 🔄 **Automatically sync solutions** from **TLE Eliminator** playlists on the 6-hourly cron.
    - 📌 **Manually add a solution link** for the contests the matcher misses (admin only).
-- 🗓 Google Calendar Integration
-   - ⏰ **Add a contest as a reminder** via a prefilled Google Calendar event.
-   - 📋 **Bulk-add by platform** for upcoming and ongoing contests.
+- 🗓 Calendar Integration
+   - ⏰ **Add a single contest** via a prefilled Google Calendar event.
+   - 📋 **Export by platform** as one `.ics` file — imports into Google, Apple and Outlook.
 - 🎨 User Interface
    - 📜 **Infinite scrolling** for completed contests.
    - 🌗 **Dark/Light mode toggle.**
    - 📱 **Mobile and tablet responsive design.**
 - 🚀 Performance Optimization
-   - 🚀 **Caching of Contests** using Redis.
-   - 📤 **Chunked data transfer** for optimal backend performance.
+   - 🚀 **Redis caching** of the first page, invalidated by a version counter rather than a blocking `KEYS` scan.
+   - 🔖 **Cursor pagination** over an indexed `(startTime, _id)`, stable while the cron writes.
+   - 🧮 **Status derived on read**, so it is never stale regardless of cache TTL.
+   - 📥 **Bulk upserts** — one round trip per refresh instead of one query per contest.
 - 🛠️ Deployment and Infrastructure
    - 🐳 **Dockerized setup** for seamless deployment.
    - 🔄 **CI/CD pipeline** for automated testing and deployment.
@@ -61,11 +63,22 @@
 
 ## 🔌 API Endpoints
 
-### 📢 Fetch all contests
+### 📢 Fetch contests
+
+Filtering, search and pagination are all applied by the database, so they cover
+every contest rather than only the rows already loaded in the browser.
 
 ```http
-GET /api/contests?offset=0&limit=30
+GET /api/contests?platforms=codeforces,codechef&status=upcoming&q=round&limit=30&cursor=<opaque>
 ```
+
+| Parameter | Values | Notes |
+|---|---|---|
+| `platforms` | `codeforces`, `codechef`, `leetcode` (comma separated) | Anything else is ignored |
+| `status` | `all`, `upcoming`, `ongoing`, `completed` | Derived from the clock, not stored |
+| `q` | free text | Case-insensitive substring of the name, capped at 100 chars |
+| `limit` | 1–100 | Defaults to 30, clamped |
+| `cursor` | `nextCursor` from a previous response | Opaque `(startTime, _id)` pair |
 
 **Response:**
 
@@ -73,18 +86,24 @@ GET /api/contests?offset=0&limit=30
 {
   "contests": [
     {
-      "contestId": "12345",
-      "platform": "Codeforces",
-      "name": "Codeforces Round 999",
-      "startTime": "2025-03-20T14:00:00Z",
-      "duration": "2h",
-      "status": "upcoming",
+      "contestId": "cf_2282",
+      "platform": "codeforces",
+      "name": "Kotlin Heroes: Episode 15",
+      "startTime": "2026-12-08T14:35:00.000Z",
+      "endTime": "2026-12-08T17:05:00.000Z",
+      "duration": 9000,
+      "status": "UPCOMING",
       "youtubeVideo": "https://youtu.be/example"
     }
   ],
+  "nextCursor": "MjAyNi0xMi0wOFQxNDozNTowMC4wMDBafDY4...",
   "hasMore": true
 }
 ```
+
+Pagination is by cursor rather than offset: the cron inserts contests between a
+visitor's page requests, and `skip()` would shift every later row, making the
+infinite scroll repeat or skip entries.
 
 ### ➕ Add YouTube solution manually
 
@@ -190,6 +209,19 @@ a revocable Redis-backed `httpOnly` session cookie.
    The frontend calls `/api/...` on its own origin, which nginx proxies in production. In
    development Vite's `server.proxy` forwards `/api` to the backend, so there is no CORS
    setup and no API base URL to configure. Point it elsewhere with `VITE_API_TARGET`.
+
+### 🗃 Database migration
+
+Run once after upgrading from a version that stored `startTime`/`endTime` as
+strings and `status` as a field. The deploy workflow runs it automatically; for a
+manual run:
+
+```sh
+cd backend && npm run migrate
+```
+
+It converts string dates, removes the stored status, builds the indexes, and
+refuses to finish while any string dates remain. Safe to run repeatedly.
 
 ### 🧪 Tests
 

@@ -6,6 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Contest, Platform } from '@/utils/types';
+import { downloadIcs } from '@/utils/calendar';
 import { toast } from '@/components/ui/use-toast';
 
 interface GoogleCalendarSyncProps {
@@ -30,35 +31,14 @@ const GoogleCalendarSync: React.FC<GoogleCalendarSyncProps> = ({ contests }) => 
     });
   };
 
-  const createGoogleCalendarUrl = (contest: Contest) => {
-    const startDate = new Date(contest.startTime);
-    const endDate = new Date(contest.endTime);
-    
-    // Format dates for Google Calendar
-    const startTimeStr = startDate.toISOString().replace(/-|:|\.\d+/g, '');
-    const endTimeStr = endDate.toISOString().replace(/-|:|\.\d+/g, '');
-    
-    const params = new URLSearchParams({
-      action: 'TEMPLATE',
-      text: `[${contest.platform.toUpperCase()}] ${contest.name}`,
-      dates: `${startTimeStr}/${endTimeStr}`,
-      details: `Coding contest on ${contest.platform}\n${contest.url}`,
-      location: contest.url,
-      trp: 'false',
-      sprop: 'website:contest-reminder'
-    });
-    
-    return `https://www.google.com/calendar/render?${params.toString()}`;
-  };
-
   const addAllEventsToCalendar = () => {
-    const filteredContests = contests.filter(
-      (contest) => 
-        selectedPlatforms.includes(contest.platform) && 
+    const selected = contests.filter(
+      (contest) =>
+        selectedPlatforms.includes(contest.platform) &&
         contest.status !== 'COMPLETED'
     );
-    
-    if (filteredContests.length === 0) {
+
+    if (selected.length === 0) {
       toast({
         title: "No contests to add",
         description: "Please select at least one platform with upcoming or ongoing contests",
@@ -66,22 +46,14 @@ const GoogleCalendarSync: React.FC<GoogleCalendarSyncProps> = ({ contests }) => 
       });
       return;
     }
-    
-    // First contest will open immediately
-    window.open(createGoogleCalendarUrl(filteredContests[0]), '_blank');
-    
-    // Remaining contests will open with a delay to avoid popup blockers
-    filteredContests.slice(1).forEach((contest, index) => {
-      setTimeout(() => {
-        window.open(createGoogleCalendarUrl(contest), '_blank');
-      }, (index + 1) * 1000);
-    });
-    
+
+    downloadIcs(selected);
+
     toast({
-      title: "Adding to Calendar",
-      description: `Adding ${filteredContests.length} contests to Google Calendar`,
+      title: "Calendar file downloaded",
+      description: `Open contests.ics to add ${selected.length} contest${selected.length === 1 ? '' : 's'} to your calendar`,
     });
-    
+
     setIsOpen(false);
   };
 
@@ -91,13 +63,13 @@ const GoogleCalendarSync: React.FC<GoogleCalendarSyncProps> = ({ contests }) => 
         <PopoverTrigger asChild>
           <Button variant="outline" className="gap-2">
             <Calendar className="h-4 w-4" />
-            Sync with Google Calendar
+            Add to Calendar
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-80">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h4 className="font-medium">Google Calendar Sync</h4>
+              <h4 className="font-medium">Add to Calendar</h4>
               <Button 
                 variant="ghost" 
                 size="sm" 
@@ -128,11 +100,12 @@ const GoogleCalendarSync: React.FC<GoogleCalendarSyncProps> = ({ contests }) => 
             
             <Button onClick={addAllEventsToCalendar} className="w-full gap-2">
               <CheckSquare className="h-4 w-4" />
-              Add Selected to Calendar
+              Download .ics
             </Button>
             
             <p className="text-xs text-muted-foreground">
-              Only upcoming and ongoing contests will be added to your calendar.
+              Downloads one calendar file for the selected platforms. Only upcoming and
+              ongoing contests are included. Works with Google, Apple and Outlook calendars.
             </p>
           </div>
         </PopoverContent>

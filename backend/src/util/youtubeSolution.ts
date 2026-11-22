@@ -1,7 +1,9 @@
 
 import { Contest, IContest } from '../model/Contest';
 import axios from 'axios';
+import { describeError } from './http';
 import { IYouTubeApiResponse, IYoutubeVideo } from './types';
+import { findBestMatch } from './matchSolution';
 
 const YT_PLAYLIST = {
     codeforces: 'PLcXpkI9A-RZLUfBSNp-YQBCOezZKbDSgB',
@@ -28,29 +30,11 @@ const fetchVideos = async (playlistId: string): Promise<IYoutubeVideo[]> => {
             title: item.snippet.title,
             url: `https://www.youtube.com/watch?v=${item.snippet.resourceId.videoId}`
         }));
-    } catch (error: any) {
-        console.error('Error fetching playlist:', error.data || error.message);
+    } catch (error) {
+        console.error('Error fetching playlist:', describeError(error));
         return [];
     }
 }
-
-const normalizeText = (text: string): string => {
-    return text.toLowerCase().split('(')[0].trim().replace(/[^a-z0-9 ]/g, '');
-};
-
-const findBestMatch = (contestName: string, videos: IYoutubeVideo[]): IYoutubeVideo | null => {
-    const normalizedContest = normalizeText(contestName);
-    
-    for (const video of videos) {
-        const normalizedTitle = normalizeText(video.title);
-
-        if (normalizedTitle.includes(normalizedContest)) {
-            return video;
-        }
-    }
-    
-    return null;
-};
 
 export const youtubeSolution = async (): Promise<IContest[]> => {
     try {
@@ -66,9 +50,9 @@ export const youtubeSolution = async (): Promise<IContest[]> => {
             leetcode
         };
 
-        const contests = await Contest.find({ 
-            status: 'COMPLETED',
-            youtubeVideo: { $exists: false } 
+        const contests = await Contest.find({
+            endTime: { $lt: new Date() },
+            youtubeVideo: { $exists: false }
         });
         console.log('Contests fetched:', contests.length);
 
@@ -93,8 +77,8 @@ export const youtubeSolution = async (): Promise<IContest[]> => {
         }
 
         return contests;
-    } catch (error: any) {
-        console.error('Error fetching playlist:', error.data || error.message);
+    } catch (error) {
+        console.error('Error matching YouTube solutions:', describeError(error));
         return [];
     }
 };

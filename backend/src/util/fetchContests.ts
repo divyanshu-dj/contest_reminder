@@ -1,5 +1,6 @@
-import { Contest, IContest } from '../model/Contest';
+import { Contest } from '../model/Contest';
 import axios from 'axios';
+import { describeError } from './http';
 
 const API_ENDPOINTS = {
     codeforces: 'https://codeforces.com/api/contest.list',
@@ -7,115 +8,99 @@ const API_ENDPOINTS = {
     leetcode: 'https://leetcode.com/graphql'
 };
 
-const fetchCodeforcesContests = async (): Promise<IContest[]> => {
+/** Shape we upsert. No `status` - it is derived on read from these two dates. */
+interface FetchedContest {
+    contestId: string;
+    name: string;
+    platform: string;
+    url: string;
+    startTime: Date;
+    endTime: Date;
+    duration: number;
+}
+
+const validDates = (start: Date, end: Date): boolean =>
+    !Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && end >= start;
+
+const fetchCodeforcesContests = async (): Promise<FetchedContest[]> => {
     try {
-        const { data } = await axios.get<any>("https://codeforces.com/api/contest.list");
+        const { data } = await axios.get<any>(API_ENDPOINTS.codeforces);
         if (!data.result) {
-            console.error('Invalid Codeforces API response:');
+            console.error('Invalid Codeforces API response');
             return [];
         }
-        console.log(data.result.length, 'Codeforces contests fetched');
+
         const contests = data.result
             .filter((contest: any) => contest.phase !== 'PENDING_SYSTEM_TEST')
-            .map((contest: any) => {
-                const startTimeMs = contest.startTimeSeconds * 1000;
-                const endTimeMs = startTimeMs + (contest.durationSeconds * 1000);
+            .map((contest: any): FetchedContest | null => {
+                const startTime = new Date(contest.startTimeSeconds * 1000);
+                const endTime = new Date(startTime.getTime() + contest.durationSeconds * 1000);
+                if (!validDates(startTime, endTime)) return null;
 
-                const statusMap: Record<string, IContest["status"]> = {
-                    BEFORE: "UPCOMING",
-                    CODING: "ONGOING",
-                    SYSTEM_TEST: "ONGOING",
-                    FINISHED: "COMPLETED",
-                };
                 return {
                     contestId: `cf_${contest.id}`,
                     name: contest.name,
                     platform: 'codeforces',
                     url: `https://codeforces.com/contest/${contest.id}`,
-                    startTime: new Date(startTimeMs).toISOString(),
-                    endTime: new Date(endTimeMs).toISOString(),
+                    startTime,
+                    endTime,
                     duration: contest.durationSeconds,
-                    status: statusMap[contest.phase] || "UPCOMING"
                 };
-            });
+            })
+            .filter(Boolean) as FetchedContest[];
 
+        console.log(contests.length, 'Codeforces contests fetched');
         return contests;
-    }
-    catch (error) {
-        console.error("Codeforces API error:", error);
+    } catch (error) {
+        console.error('Codeforces API error:', describeError(error));
         return [];
     }
-}
+};
 
-
-const fetchCodechefContests = async (): Promise<IContest[]> => {
+const fetchCodechefContests = async (): Promise<FetchedContest[]> => {
     try {
         const { data } = await axios.get<any>(API_ENDPOINTS.codechef);
 
-        console.log(data.future_contests.length, 'CodeChef future contests fetched');
-        console.log(data.present_contests.length, 'CodeChef present contests fetched');
-        
-        // const fetchPastContests = async (offset = 600, allPastContests: any[] = []): Promise<IContest[]> => {
-        //     const pastUrl = `https://www.codechef.com/api/list/contests/past?sort_by=START&sorting_order=desc&offset=${offset}&mode=all`;
-        //     const { data } = await axios.get<any>(pastUrl);
-        //     // console.log(data.contests)
-        //     if (offset == 700) {
-        //         console.log(`Fetched ${offset} ${allPastContests.length} past contests.`);
-        //         return allPastContests; 
-        //     }
-        //     console.log(allPastContests.length, ' ', offset, 'ALL CodeChef past contests fetched');
-        //     return fetchPastContests(offset + 20, [...allPastContests, ...data.contests]);
-        // };
-        
-        // const pastContests = await fetchPastContests();
-
-        // console.log(pastContests.length, 'CodeChef past contests fetched');
-        console.log(data.past_contests.length, 'CodeChef past contests fetched');
-
-        const processContest = (contest: any, status: string) => {
+        const processContest = (contest: any): FetchedContest | null => {
             if (!contest?.contest_code || !contest?.contest_name) {
-                console.warn('Skipping invalid contest:', contest);
+                console.warn('Skipping invalid contest:', contest?.contest_code ?? '(no code)');
                 return null;
             }
 
-            try {
-                // Use ISO dates directly from the API response
-                const startTime = new Date(contest.contest_start_date_iso).getTime();
-                const endTime = new Date(contest.contest_end_date_iso).getTime();
-                const duration = (endTime - startTime) / 1000; // Convert to seconds
-
-                return {
-                    contestId: `cc_${contest.contest_code}`,
-                    name: contest.contest_name,
-                    platform: "codechef",
-                    url: `https://www.codechef.com/${contest.contest_code}`,
-                    startTime: contest.contest_start_date_iso,
-                    endTime: contest.contest_end_date_iso,
-                    duration,
-                    status: status.toUpperCase()
-                };
-            } catch (error) {
-                console.error('Error processing contest:', error);
+            // These arrive offset-bearing, e.g. 2026-11-23T19:00:00+05:30.
+            const startTime = new Date(contest.contest_start_date_iso);
+            const endTime = new Date(contest.contest_end_date_iso);
+            if (!validDates(startTime, endTime)) {
+                console.warn('Skipping contest with unparseable dates:', contest.contest_code);
                 return null;
             }
+
+            return {
+                contestId: `cc_${contest.contest_code}`,
+                name: contest.contest_name,
+                platform: 'codechef',
+                url: `https://www.codechef.com/${contest.contest_code}`,
+                startTime,
+                endTime,
+                duration: (endTime.getTime() - startTime.getTime()) / 1000,
+            };
         };
 
         const contests = [
-            ...(data.future_contests?.map((c: any) => processContest(c, "UPCOMING")) || []),
-            ...(data.present_contests?.map((c: any) => processContest(c, "ONGOING")) || []),
-            ...(data.past_contests?.map((c: any) => processContest(c, "COMPLETED")) || [])
-            // ...(pastContests?.map((c: any) => processContest(c, "COMPLETED")) || [])
-        ].filter(Boolean);
+            ...(data.future_contests ?? []),
+            ...(data.present_contests ?? []),
+            ...(data.past_contests ?? []),
+        ].map(processContest).filter(Boolean) as FetchedContest[];
 
+        console.log(contests.length, 'CodeChef contests fetched');
         return contests;
     } catch (error) {
-        console.error("CodeChef API error:", error);
+        console.error('CodeChef API error:', describeError(error));
         return [];
     }
-}
+};
 
-
-const fetchLeetcodeContests = async (): Promise<IContest[]> => {
+const fetchLeetcodeContests = async (): Promise<FetchedContest[]> => {
     const query = {
         query: `
           {
@@ -137,70 +122,71 @@ const fetchLeetcodeContests = async (): Promise<IContest[]> => {
             }
         });
 
-        const data = response.data.data.allContests;
-        console.log(data.length, 'LeetCode contests fetched');
-        const now = Date.now();
+        const all = response.data?.data?.allContests;
+        if (!Array.isArray(all)) {
+            console.error('Invalid LeetCode API response');
+            return [];
+        }
 
-        const activeContests = data.map((contest: any) => {
-            const startTime = contest.startTime * 1000;
-            const durationMs = contest.duration * 1000;
-            const endTime = startTime + durationMs;
-
-
-            let status: IContest['status'] = 'UPCOMING';
-            if (now > endTime) {
-                status = 'COMPLETED';
-            } else if (now >= startTime && now <= endTime) {
-                status = 'ONGOING';
-            }
+        const contests = all.map((contest: any): FetchedContest | null => {
+            const startTime = new Date(contest.startTime * 1000);
+            const endTime = new Date(startTime.getTime() + contest.duration * 1000);
+            if (!validDates(startTime, endTime)) return null;
 
             return {
                 contestId: `lc_${contest.titleSlug}`,
                 platform: 'leetcode',
                 name: contest.title,
                 url: `https://leetcode.com/contest/${contest.titleSlug}`,
-                startTime: new Date(startTime).toISOString(),
-                endTime: new Date(endTime).toISOString(),
+                startTime,
+                endTime,
                 duration: contest.duration,
-                status
             };
-        });
+        }).filter(Boolean) as FetchedContest[];
 
-        return activeContests;
-    } catch (error: any) {
-        console.error('API Error:', error.response.status, error.response.data);
+        console.log(contests.length, 'LeetCode contests fetched');
+        return contests;
+    } catch (error) {
+        console.error('LeetCode API error:', describeError(error));
         return [];
     }
 };
 
-const fetchAllContests = async () => {
+const fetchAllContests = async (): Promise<void> => {
     try {
         const [codeforces, codechef, leetcode] = await Promise.all([
-          fetchCodeforcesContests(),
-          fetchCodechefContests(),
-          fetchLeetcodeContests()
+            fetchCodeforcesContests(),
+            fetchCodechefContests(),
+            fetchLeetcodeContests()
         ]);
-    
-        // Combine all contests
+
         const contests = [...codeforces, ...codechef, ...leetcode];
         console.log('All contests fetched:', contests.length);
 
-        await Promise.all(contests.map(async (contest) => {
-            try {
-                await Contest.findOneAndUpdate(
-                    { contestId: contest.contestId },
-                    { $set: contest },
-                    { upsert: true, new: true }
-                );
-            } catch (error) {
-                console.error(`Failed to update contest ${contest.contestId}:`, error);
-            }
-        }));
-        console.log('Contests updated successfully!');
-      } catch (error) {
-        console.error('Error fetching contests:', error);
-        return [];
-      }
+        if (contests.length === 0) {
+            console.warn('No contests fetched from any source - leaving existing data alone');
+            return;
+        }
+
+        // One round trip. This previously issued a findOneAndUpdate per contest
+        // inside Promise.all - ~3000 concurrent queries against the connection pool.
+        const result = await Contest.bulkWrite(
+            contests.map(contest => ({
+                updateOne: {
+                    filter: { contestId: contest.contestId },
+                    update: { $set: contest },
+                    upsert: true,
+                }
+            })),
+            { ordered: false }
+        );
+
+        console.log(
+            `Contests updated: ${result.upsertedCount} inserted, ${result.modifiedCount} modified`
+        );
+    } catch (error) {
+        console.error('Error fetching contests:', describeError(error));
+    }
 };
 
 export default fetchAllContests;
