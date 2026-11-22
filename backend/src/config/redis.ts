@@ -18,19 +18,50 @@ redis.ping()
     .then(res => console.log('✅ Redis Connected:', res))
     .catch(err => console.error('❌ Redis Connection Error:', err));
 
+const VERSION_KEY = 'contests:version';
+
 /**
- * Drop the cached contest pages. The cron is the only writer of contest data,
- * so without this a refresh is invisible for up to the full cache TTL.
- *
- * ponytail: KEYS is O(number of keys) and blocks Redis. Fine at this key
- * count; if it grows, switch the cache keys to `contests:v{n}:...` and make
- * invalidation an INCR of the version counter.
+ * Cache keys are namespaced by this counter, so invalidation is a single INCR
+ * rather than a KEYS scan - KEYS is O(number of keys) and blocks Redis while
+ * it runs. Stale entries under the old version are never read again and expire
+ * on their own TTL.
  */
+export const contestCacheVersion = async (): Promise<string> => {
+    try {
+        return (await redis.get(VERSION_KEY)) ?? '0';
+    } catch (error) {
+        console.error('❌ Failed to read cache version:', error);
+        return 'unavailable';
+    }
+};
+
 export const invalidateContestCache = async (): Promise<void> => {
     try {
-        const keys = await redis.keys('contests:*');
-        if (keys.length) await redis.del(...keys);
+        await redis.incr(VERSION_KEY);
     } catch (error) {
         console.error('❌ Failed to invalidate contest cache:', error);
+    }
+};
+
+/**
+ * Cache access is best-effort on both sides. A Redis outage used to surface as
+ * a 500 from the only public read endpoint, because the rejected get() landed
+ * in the route's catch block; now it degrades to a cache miss and the request
+ * is served from Mongo.
+ */
+export const cacheGet = async (key: string): Promise<string | null> => {
+    try {
+        return await redis.get(key);
+    } catch (error) {
+        console.error('❌ Cache read failed (serving uncached):', error);
+        return null;
+    }
+};
+
+export const cacheSet = async (key: string, value: string, ttlSeconds: number): Promise<void> => {
+    try {
+        await redis.set(key, value, 'EX', ttlSeconds);
+    } catch (error) {
+        console.error('❌ Cache write failed:', error);
     }
 };

@@ -2,7 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import { Contest } from './model/Contest';
 import connectDB from './config/db';
-import { redis, invalidateContestCache } from './config/redis';
+import { redis, invalidateContestCache, contestCacheVersion, cacheGet, cacheSet } from './config/redis';
+import { statusFor } from './util/status';
 import { clampPagination, isAllowedYoutubeUrl } from './util/validate';
 import { rateLimit, requireAdmin } from './util/guards';
 import dotenv from "dotenv";
@@ -33,29 +34,33 @@ connectDB();
 app.get('/api/contests', rateLimit(redis, { prefix: 'read', windowSec: 60, max: 120 }), async (req, res) => {
     try {
         const { offset, limit } = clampPagination(req.query?.offset, req.query?.limit, PAGE_SIZE);
-        const cacheKey = `contests:${offset}:${limit}`;
+        const cacheKey = `contests:v${await contestCacheVersion()}:${offset}:${limit}`;
 
-        const cachedData = await redis.get(cacheKey);
-        if (cachedData) {
-            res.json(JSON.parse(cachedData));
-            return;
+        const cached = await cacheGet(cacheKey);
+        let page: { contests: any[]; hasMore: boolean };
+
+        if (cached) {
+            page = JSON.parse(cached);
+        } else {
+            const [docs, totalContests] = await Promise.all([
+                Contest.find({}).sort({ startTime: -1 }).skip(offset).limit(limit).lean(),
+                Contest.countDocuments(),
+            ]);
+            page = { contests: docs, hasMore: offset + limit < totalContests };
+            await cacheSet(cacheKey, JSON.stringify(page), CACHE_EXPIRY);
         }
 
-        const contests = await Contest.find({})
-            .sort({ startTime: -1 })
-            .skip(offset)
-            .limit(limit);
-
-        const totalContests = await Contest.countDocuments();
-
-        const response = {
-            contests,
-            hasMore: offset + limit < totalContests
-        };
-
-        await redis.set(cacheKey, JSON.stringify(response), 'EX', CACHE_EXPIRY);
-
-        res.json(response);
+        // Status is attached after the cache, never inside it. Caching a derived
+        // status would just reintroduce the staleness the derivation removes -
+        // a contest would still claim to be UPCOMING for the length of the TTL.
+        const now = new Date();
+        res.json({
+            contests: page.contests.map(contest => ({
+                ...contest,
+                status: statusFor(new Date(contest.startTime), new Date(contest.endTime), now),
+            })),
+            hasMore: page.hasMore,
+        });
     } catch (error) {
         console.error("❌ Error fetching contests:", error);
         res.status(500).json({ error: "Failed to fetch contests" });
