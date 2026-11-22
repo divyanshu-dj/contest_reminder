@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
 import { Search, Youtube, Save } from 'lucide-react';
 import { getPlatformDisplayName } from '@/utils/helpers';
-import { handleAutoSync, addSolutionUrl } from '@/utils/api';
+import { addSolutionUrl, getAdminToken, setAdminToken } from '@/utils/api';
+import { KeyRound } from 'lucide-react';
 import { useQueryClient } from "@tanstack/react-query";
 
 interface AdminContestFormProps {
@@ -19,6 +20,13 @@ const AdminForm: React.FC<AdminContestFormProps> = ({ contests }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedContest, setSelectedContest] = useState<Contest | null>(null);
   const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [adminToken, setAdminTokenState] = useState(getAdminToken);
+  const queryClient = useQueryClient();
+
+  const handleTokenChange = (token: string) => {
+    setAdminTokenState(token);
+    setAdminToken(token);
+  };
 
   const filteredContests = useMemo(() => {
     return contests.filter(contest => {
@@ -64,14 +72,7 @@ const AdminForm: React.FC<AdminContestFormProps> = ({ contests }) => {
     // Save YouTube URL in db
     const updatedContest = await addSolutionUrl(selectedContest.contestId, youtubeUrl);
     
-    if (!updatedContest) {
-      toast({
-        title: "Failed to save YouTube URL",
-        description: "An error occurred while saving the YouTube URL",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (!updatedContest) return;
     toast({
       title: "YouTube URL saved",
       description: `YouTube URL saved for contest: ${updatedContest.name}`,
@@ -84,6 +85,8 @@ const AdminForm: React.FC<AdminContestFormProps> = ({ contests }) => {
       youtubeUrl
     });
     
+    queryClient.invalidateQueries({ queryKey: ['contests'] });
+
     setSelectedContest(null);
     setYoutubeUrl('');
   };
@@ -93,7 +96,6 @@ const AdminForm: React.FC<AdminContestFormProps> = ({ contests }) => {
     setYoutubeUrl(contest.youtubeVideo || '');
   };
   
-  const queryClient = useQueryClient();
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
@@ -104,13 +106,28 @@ const AdminForm: React.FC<AdminContestFormProps> = ({ contests }) => {
       </CardHeader>
 
       <CardContent className="space-y-6">
+        {/* Admin token: the server rejects writes without it. */}
         <div>
-          <Button className='bg-white text-primary border-primary hover:bg-primary hover:text-white'
-            onClick={() => handleAutoSync(queryClient)}>
-            <Youtube className="mr-2 h-4 w-4" />
-            Auto sync YouTube solutions
-          </Button>
+          <h3 className="text-sm font-medium mb-2">Admin Token</h3>
+          <div className="relative">
+            <KeyRound className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="password"
+              placeholder="Paste the admin token"
+              className="pl-8"
+              value={adminToken}
+              onChange={(e) => handleTokenChange(e.target.value)}
+              autoComplete="off"
+            />
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            Stored in this browser only and sent with write requests.
+          </p>
         </div>
+        <p className="text-xs text-muted-foreground">
+          Solutions are matched automatically by the backend every 6 hours. Use the
+          form below only for the contests that matcher misses.
+        </p>
         {/* Platform selector */}
         <div>
           <h3 className="text-sm font-medium mb-2">Platform</h3>
@@ -243,7 +260,7 @@ const AdminForm: React.FC<AdminContestFormProps> = ({ contests }) => {
         {/* Save button */}
         <Button
           onClick={handleSaveYoutubeUrl}
-          disabled={!selectedContest || !youtubeUrl}
+          disabled={!selectedContest || !youtubeUrl || !adminToken}
           className="w-full"
         >
           <Save className="mr-2 h-4 w-4" />

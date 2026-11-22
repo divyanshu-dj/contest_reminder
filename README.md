@@ -17,11 +17,11 @@
    - 🎯 **Apply filters** to view contests from selected platforms.
    - ⭐ **Bookmark contests** for quick and easy access.
 - 🎥 YouTube Solution Integration
-   - 📌 **Manually add solution links.**
-   - 🔄 **Automatically sync solutions** from **TLE Eliminator**.
+   - 🔄 **Automatically sync solutions** from **TLE Eliminator** playlists on the 6-hourly cron.
+   - 📌 **Manually add a solution link** for the contests the matcher misses (admin only).
 - 🗓 Google Calendar Integration
-   - ⏰ **Add upcoming contests** as reminders.
-   - 🔁 **Auto-sync new contests** when access is granted.
+   - ⏰ **Add a contest as a reminder** via a prefilled Google Calendar event.
+   - 📋 **Bulk-add by platform** for upcoming and ongoing contests.
 - 🎨 User Interface
    - 📜 **Infinite scrolling** for completed contests.
    - 🌗 **Dark/Light mode toggle.**
@@ -34,6 +34,10 @@
    - 🔄 **CI/CD pipeline** for automated testing and deployment.
    - 🔁 **Nginx as a reverse proxy** for improved performance.
 - 🔒 Security
+   - 🔑 **Bearer-token auth** on the single write endpoint (fails closed when unconfigured).
+   - 🧵 **One privileged endpoint**, because solution syncing moved to the cron instead of an exposed route.
+   - 🧹 **Server-side URL allowlist** on stored solution links, so they can't be used for injection.
+   - 🚦 **Per-IP rate limiting** backed by Redis, tighter on quota-spending routes.
    - ☠️ **DDoS protection and Web Application Firewall (WAF)** using Cloudflare.
    - 🔐 **SSL/TLS encryption** for secure HTTPS connections.
 - 📊 Analytics
@@ -84,8 +88,11 @@ GET /api/contests?offset=0&limit=30
 
 ### ➕ Add YouTube solution manually
 
+Requires the admin token. Only `https` URLs on YouTube hosts are accepted.
+
 ```http
 PATCH /api/contests/:contestId/solution
+Authorization: Bearer $ADMIN_TOKEN
 ```
 
 **Request Body:**
@@ -96,17 +103,21 @@ PATCH /api/contests/:contestId/solution
 }
 ```
 
-### 🔄 Sync YouTube solutions automatically
+### 🔐 Admin authentication
 
-```http
-POST /api/contests/sync
-```
+The one write endpoint is gated by a shared bearer token read from `ADMIN_TOKEN`.
 
-**Response:**
+This is a deliberate shortcut, not a recommendation. It fits the current shape of the
+project — exactly one operator, one privileged operation — and its limits are known:
+no identity or audit trail, no expiry, no revocation short of a redeploy, and the
+token sits in `localStorage`, where any future XSS could read it. `requireAdmin` fails
+closed, so an unset `ADMIN_TOKEN` makes the endpoint return `503` rather than opening it.
 
-```json
-{ "message": "Contests synced successfully" }
-```
+If a second admin ever needs access, the token should be replaced with identity-based
+access rather than reissued: either a Cloudflare Access policy in front of the route
+(with the origin locked to Cloudflare and the `Cf-Access-Jwt-Assertion` header verified,
+so the origin IP can't be used to bypass it), or Google OIDC with an email allowlist and
+a revocable Redis-backed `httpOnly` session cookie.
 
 ## ⚙️ Setup & Installation
 
@@ -121,15 +132,19 @@ POST /api/contests/sync
 
 1. **Clone the repository:**
    ```sh
-   git clone https://github.com/your-repo/contest-reminder.git
-   cd contest-reminder
+   git clone https://github.com/divyanshu-dj/contest_reminder.git
+   cd contest_reminder
    ```
 2. **Create a `.env` file in the `backend/` directory:**
    ```env
    MONGO_URI=your_mongo_connection_string
    YOUTUBE_API_KEY=your_youtube_api_key
+   # Include credentials in the URL if your Redis needs auth: redis://:password@host:6379
    REDIS_URL=your_redis_connection_string
-   REDIS_PASSWORD=your_redis_password
+   # Shared secret for the write endpoints. Generate with:
+   #   openssl rand -hex 32
+   # If unset, the admin endpoints reject every request.
+   ADMIN_TOKEN=your_admin_token
    ```
 3. **Run the application using Docker Compose:**
    ```sh
@@ -143,19 +158,20 @@ POST /api/contests/sync
 
 1. **Clone the repository:**
    ```sh
-   git clone https://github.com/your-repo/contest-reminder.git
-   cd contest-reminder
+   git clone https://github.com/divyanshu-dj/contest_reminder.git
+   cd contest_reminder
    ```
-2. **Install dependencies:**
+2. **Install dependencies** (there is no root `package.json`; each app has its own):
    ```sh
-   npm install
+   (cd backend && npm install)
+   (cd frontend && npm install)
    ```
 3. **Set up environment variables:** (Create `.env` file inside `backend/`)
    ```env
    MONGO_URI=your_mongo_connection_string
    YOUTUBE_API_KEY=your_youtube_api_key
    REDIS_URL=your_redis_connection_string
-   REDIS_PASSWORD=your_redis_password
+   ADMIN_TOKEN=your_admin_token
    ```
 4. **Run the backend:**
    ```sh
@@ -164,17 +180,35 @@ POST /api/contests/sync
    ```
 5. **Run the frontend:**
    ```sh
+   cd frontend
    npm run dev
    ```
 6. **Access the application:**
-   - Frontend: `http://localhost:3000`
-   - Backend: `http://localhost:5000`
+   - Frontend: `http://localhost:8080` — this is the one to open
+   - Backend: `http://localhost:5055` (override with `PORT`; the containers pin `PORT=5000`)
+
+   The frontend calls `/api/...` on its own origin, which nginx proxies in production. In
+   development Vite's `server.proxy` forwards `/api` to the backend, so there is no CORS
+   setup and no API base URL to configure. Point it elsewhere with `VITE_API_TARGET`.
+
+### 🧪 Tests
+
+```sh
+cd backend && npm test
+```
+
+Runs `tsc`, then the Node built-in test runner (`node --test`) over the compiled output —
+no test framework dependency. Covers the pagination clamp, the solution-URL allowlist, the
+rate limiter (including its fail-open behaviour when Redis is unreachable), and the admin
+guard's fail-closed behaviour.
 
 ## 🚀 CI/CD Pipeline
 
 ### ⚙️ Continuous Integration (CI)
 
-- **Build Check:** Every push triggers a build check to ensure the application compiles correctly.
+- **Build Check:** Every pull request against `main` builds both apps and runs the backend
+  test suite. Pushes made directly to `main` skip CI and deploy immediately, so changes
+  should go through a pull request.
 
 ### 🚀 Continuous Deployment (CD)
 
@@ -183,7 +217,6 @@ POST /api/contests/sync
 
 ## 🔮 Future Plans
 
-- 📨 Add RabbitMQ for cron job (contest fetching and yt video sync).
 - 🔗 Connect and integrate user coding profiles from multiple platforms.
 - 🎴 Create custom cards displaying user statistics and achievements.
 - 🗺️ Develop an interactive DSA Weekly Roadmap like a checklist for guided learning which can be printed.

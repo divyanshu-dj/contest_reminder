@@ -57,10 +57,12 @@ jobs:
             # Run backend
             sudo docker run -d --name contest_backend \
               -p 5000:5000 \
+              -e PORT=5000 \
               -e MONGO_URI="${{ secrets.MONGO_URI }}" \
               -e REDIS_URL="${{ secrets.REDIS_URL }}" \
               -e REDIS_PASSWORD="${{ secrets.REDIS_PASSWORD }}" \
               -e YOUTUBE_API_KEY="${{ secrets.YOUTUBE_API_KEY }}" \
+              -e ADMIN_TOKEN="${{ secrets.ADMIN_TOKEN }}" \
               -e NODE_ENV=production \
               divyanshujha/contest-backend:latest
 
